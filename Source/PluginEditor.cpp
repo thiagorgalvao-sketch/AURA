@@ -82,8 +82,7 @@ AuraBassAudioProcessorEditor::~AuraBassAudioProcessorEditor()
 
 String AuraBassAudioProcessorEditor::formatValue (const String& id, float v)
 {
-    if (id == ParamIDs::drive) return String (v, 2);
-    if (id == ParamIDs::blend) return String (v, 1) + "%";
+    if (id == ParamIDs::blend) return String (roundToInt (v)) + "%";
     if (std::abs (v) < 0.05f) v = 0.0f;
     return String (v, 1) + " dB";
 }

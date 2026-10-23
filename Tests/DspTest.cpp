@@ -73,8 +73,8 @@ int main()
 
     const size_t from = (size_t) (sr / 2);
 
-    std::printf ("Drive x nível/THD (senoide 100 Hz, -12 dBFS, cab desligado, EQ plano)\n");
-    for (float drive : { 0.0f, 2.5f, 5.0f, 7.5f, 10.0f })
+    std::printf ("Drive (dB) x nível/THD (senoide 100 Hz, -12 dBFS, cab desligado, EQ plano)\n");
+    for (float drive : { -15.0f, -7.5f, 0.0f, 7.5f, 15.0f })
     {
         AuraBassAudioProcessor p;
         setParam (p, ParamIDs::cab, 0.0f);
@@ -84,7 +84,7 @@ int main()
         const double h1 = harmonic (out, from, 100), h2 = harmonic (out, from, 200), h3 = harmonic (out, from, 300),
                      h4 = harmonic (out, from, 400), h5 = harmonic (out, from, 500);
         const double thd = std::sqrt (h2*h2 + h3*h3 + h4*h4 + h5*h5) / h1 * 100.0;
-        std::printf ("  drive %4.1f  saída %6.1f dBFS  THD %5.1f%%  H2 %5.1f dB  H3 %5.1f dB\n",
+        std::printf ("  drive %+5.1f dB  saída %6.1f dBFS  THD %5.1f%%  H2 %5.1f dB  H3 %5.1f dB\n",
                      drive, juce::Decibels::gainToDecibels (rms (out, from) * std::sqrt (2.0)), thd,
                      juce::Decibels::gainToDecibels (h2 / h1), juce::Decibels::gainToDecibels (h3 / h1));
         check (finite (out), "sem NaN/Inf");
@@ -96,7 +96,7 @@ int main()
         setParam (p, ParamIDs::cab, 0.0f);
         setParam (p, ParamIDs::presence, 0.0f);
         setParam (p, ParamIDs::blend, 0.0f);
-        setParam (p, ParamIDs::drive, 10.0f);
+        setParam (p, ParamIDs::drive, 15.0f);
         std::vector<float> in;
         auto out = run (p, 440.0f, 0.25f, &in);
         const int lat = p.getLatencySamples();
@@ -131,7 +131,7 @@ int main()
         setParam (p, ParamIDs::cab, 0.0f);
         setParam (p, ParamIDs::presence, 0.0f);
         setParam (p, ParamIDs::blend, 100.0f);
-        setParam (p, ParamIDs::drive, 10.0f);
+        setParam (p, ParamIDs::drive, 15.0f);
         setParam (p, ParamIDs::driveOn, 0.0f);
         std::vector<float> in;
         auto out = run (p, 100.0f, 0.25f, &in);
@@ -143,7 +143,7 @@ int main()
         for (size_t i = from; i < out.size(); ++i) err = std::max (err, (double) std::abs (out[i] - in[i - (size_t) lat]));
         const double h1 = harmonic (out, from, 100), h3 = harmonic (out, from, 300);
         std::printf ("  erro vs. limpo %.6f, H3 %.1f dB\n", err, juce::Decibels::gainToDecibels (h3 / h1 + 1e-12));
-        check (err < 1.0e-4, "DRIVE off ignora Drive 10 e Blend 100%");
+        check (err < 1.0e-4, "DRIVE off ignora Drive +15 dB e Blend 100%");
         check (finite (out), "sem NaN/Inf");
     }
 
@@ -208,7 +208,7 @@ int main()
         {
             setParam (p, ParamIDs::driveOn, 0.0f);
             setParam (p, ParamIDs::cab, 0.0f);
-            setParam (p, ParamIDs::drive, 8.5f);
+            setParam (p, ParamIDs::drive, 9.5f);
             setParam (p, ParamIDs::low, -12.0f);
         }
         std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());

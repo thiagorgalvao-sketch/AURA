@@ -5,7 +5,7 @@ namespace
 {
     using namespace Tone;
 
-    constexpr float maxDriveDb    = 40.0f;   // Drive 10 = +40 dB antes do clipper
+    constexpr float driveRefDb    = 20.0f;   // Drive 0 dB = +20 dB antes do clipper (faixa ±15 dB → +5 a +35 dB)
     constexpr float clipBias      = 0.15f;   // assimetria -> harmônicos pares
     constexpr int   osFactorLog2  = 2;       // 2^2 = 4x oversampling
     constexpr float wetTrim       = 0.7f;    // -3 dB: deixa Drive máximo perto de 0 dBFS
@@ -36,13 +36,19 @@ juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::crea
     using namespace juce;
     std::vector<std::unique_ptr<RangedAudioParameter>> p;
 
-    auto dbAttr = AudioParameterFloatAttributes().withLabel ("dB");
+    // Textos dos parâmetros (também usados pela DAW): dB com uma casa decimal, % inteiro
+    auto dbAttr = AudioParameterFloatAttributes()
+                      .withLabel ("dB")
+                      .withStringFromValueFunction ([] (float v, int) { return String (std::abs (v) < 0.05f ? 0.0f : v, 1) + " dB"; });
+    auto pctAttr = AudioParameterFloatAttributes()
+                       .withLabel ("%")
+                       .withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + "%"; });
     auto eq = [] (int) { return NormalisableRange<float> (-12.0f, 12.0f, 0.1f); };
 
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::level, 1 }, "Level",
-                     NormalisableRange<float> (-24.0f, 12.0f, 0.1f), 0.0f, dbAttr));
+                     NormalisableRange<float> (-15.0f, 15.0f, 0.1f), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::drive, 1 }, "Drive",
-                     NormalisableRange<float> (0.0f, 10.0f, 0.01f), 5.0f));
+                     NormalisableRange<float> (-15.0f, 15.0f, 0.1f), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::low, 1 }, "Low",
                      eq (0), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::mid, 1 }, "Mid",
@@ -50,10 +56,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::crea
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::high, 1 }, "High",
                      eq (0), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::presence, 1 }, "Presence",
-                     NormalisableRange<float> (0.0f, 12.0f, 0.1f), 3.0f, dbAttr));
+                     NormalisableRange<float> (-7.0f, 7.0f, 0.1f), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::blend, 1 }, "Blend",
-                     NormalisableRange<float> (0.0f, 100.0f, 0.1f), 100.0f,
-                     AudioParameterFloatAttributes().withLabel ("%")));
+                     NormalisableRange<float> (0.0f, 100.0f, 1.0f), 100.0f, pctAttr));
     p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::cab, 1 }, "Cab", true));
     p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::driveOn, 1 }, "Drive On", true));
 
@@ -150,7 +155,7 @@ void AuraBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 
     const double osRate = sampleRate * (1 << osFactorLog2);
     driveGain.reset (osRate, 0.05);
-    driveGain.setCurrentAndTargetValue (dbToGain (pDrive->load() / 10.0f * maxDriveDb));
+    driveGain.setCurrentAndTargetValue (dbToGain (pDrive->load() + driveRefDb));
     blendMix.reset (sampleRate, 0.05);
     blendMix.setCurrentAndTargetValue (effectiveBlend());
     cabMix.reset (sampleRate, 0.03);
@@ -183,7 +188,7 @@ void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     }
 
     updateToneFilters (false);
-    driveGain.setTargetValue (dbToGain (pDrive->load() / 10.0f * maxDriveDb));
+    driveGain.setTargetValue (dbToGain (pDrive->load() + driveRefDb));
     blendMix.setTargetValue (effectiveBlend());
     cabMix.setTargetValue (pCab->load() > 0.5f ? 1.0f : 0.0f);
     outputGain.setTargetValue (dbToGain (pLevel->load()));

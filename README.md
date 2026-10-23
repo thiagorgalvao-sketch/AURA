@@ -6,11 +6,11 @@ Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presen
 
 | Controle | O que faz |
 |---|---|
-| **DRIVE** (knob) | Quantidade de saturação (0 a 10 → até +40 dB antes do clipper) |
-| **BLEND** | Mistura do sinal limpo com o saturado |
-| **LOW / MID / HIGH** | Shelf 80 Hz / pico 600 Hz / shelf 2,5 kHz, ±12 dB |
-| **PRESENCE** | Pico em 5 kHz, 0 a +12 dB |
-| **LEVEL** | Volume de saída, −24 a +12 dB |
+| **LEVEL** | Volume de saída, −15 a +15 dB |
+| **DRIVE** (knob) | Ganho antes da saturação, −15 a +15 dB. 0 dB é o ponto nominal (+20 dB no clipper), −15 dB só esquenta, +15 dB satura bastante |
+| **LOW / MID / HIGH** | Shelf 80 Hz / pico 600 Hz / shelf 2,5 kHz, −12 a +12 dB |
+| **PRESENCE** | Pico em 5 kHz, −7 a +7 dB |
+| **BLEND** | Mistura do sinal limpo com o saturado, 0 a 100% |
 | **Botão DRIVE** (power, LED azul) | Liga/desliga só a distorção. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
 | **Chave CAB** (LED laranja) | Liga/desliga a simulação de caixa |
 
