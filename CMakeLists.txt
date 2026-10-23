@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(GritDI VERSION 0.1.0)
+project(AuraBass VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,18 +28,18 @@ endif()
 
 # Para AAX: baixe o AAX SDK (developer.avid.com), chame
 # juce_set_aax_sdk_path(/caminho/aax-sdk) e adicione AAX em FORMATS.
-set(GRIT_FORMATS VST3 Standalone)
+set(AURA_FORMATS VST3 Standalone)
 if(APPLE)
-    list(APPEND GRIT_FORMATS AU)
+    list(APPEND AURA_FORMATS AU)
 endif()
 
-juce_add_plugin(GritDI
+juce_add_plugin(AuraBass
     COMPANY_NAME                "Thiago Galvao"
-    BUNDLE_ID                   "com.thiagogalvao.gritdi"
+    BUNDLE_ID                   "com.thiagogalvao.aurabass"
     PLUGIN_MANUFACTURER_CODE    Thgo
     PLUGIN_CODE                 Grdi
-    PRODUCT_NAME                "Grit DI"
-    FORMATS                     ${GRIT_FORMATS}
+    PRODUCT_NAME                "AURA Bass"
+    FORMATS                     ${AURA_FORMATS}
     IS_SYNTH                    FALSE
     NEEDS_MIDI_INPUT            FALSE
     NEEDS_MIDI_OUTPUT           FALSE
@@ -49,17 +49,17 @@ juce_add_plugin(GritDI
     VST3_CATEGORIES             Fx Distortion
     AU_MAIN_TYPE                kAudioUnitType_Effect)
 
-target_sources(GritDI PRIVATE
+target_sources(AuraBass PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp)
 
-target_compile_definitions(GritDI PUBLIC
+target_compile_definitions(AuraBass PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_DISPLAY_SPLASH_SCREEN=0)
 
-target_link_libraries(GritDI
+target_link_libraries(AuraBass
     PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp
@@ -69,20 +69,20 @@ target_link_libraries(GritDI
         juce::juce_recommended_warning_flags)
 
 # ---------------------------------------------------------------------------
-# Teste offline do DSP (opcional): cmake -DGRIT_BUILD_TESTS=ON ...
+# Teste offline do DSP (opcional): cmake -DAURA_BUILD_TESTS=ON ...
 # ---------------------------------------------------------------------------
-option(GRIT_BUILD_TESTS "Compila o teste do DSP" OFF)
-if(GRIT_BUILD_TESTS)
-    juce_add_console_app(GritDSPTest PRODUCT_NAME "GritDSPTest")
-    target_sources(GritDSPTest PRIVATE
+option(AURA_BUILD_TESTS "Compila o teste do DSP" OFF)
+if(AURA_BUILD_TESTS)
+    juce_add_console_app(AuraDSPTest PRODUCT_NAME "AuraDSPTest")
+    target_sources(AuraDSPTest PRIVATE
         Tests/DspTest.cpp
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp)
-    target_compile_definitions(GritDSPTest PRIVATE
-        JucePlugin_Name="Grit DI"
+    target_compile_definitions(AuraDSPTest PRIVATE
+        JucePlugin_Name="AURA Bass"
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0)
-    target_link_libraries(GritDSPTest PRIVATE
+    target_link_libraries(AuraDSPTest PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_recommended_config_flags)

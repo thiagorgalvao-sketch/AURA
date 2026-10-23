@@ -1,6 +1,20 @@
-# Grit DI — overdrive de baixo (JUCE)
+# AURA Bass — overdrive de baixo (JUCE)
 
-Plugin de overdrive para baixo com Level, Drive, Low, Mid, High, Presence, Blend paralelo e simulação de caixa.
+Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presence, Level, simulação de caixa e footswitches para ligar e desligar o DRIVE e o CAB.
+
+## Controles
+
+| Controle | O que faz |
+|---|---|
+| **DRIVE** (knob) | Quantidade de saturação (0 a 10 → até +40 dB antes do clipper) |
+| **BLEND** | Mistura do sinal limpo com o saturado |
+| **LOW / MID / HIGH** | Shelf 80 Hz / pico 600 Hz / shelf 2,5 kHz, ±12 dB |
+| **PRESENCE** | Pico em 5 kHz, 0 a +12 dB |
+| **LEVEL** | Volume de saída, −24 a +12 dB |
+| **Footswitch DRIVE** | Liga/desliga só a distorção. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
+| **Footswitch CAB** | Liga/desliga a simulação de caixa |
+
+O valor de cada knob aparece no rótulo enquanto você gira. Duplo clique volta o knob ao valor padrão.
 Gera **VST3** e **Standalone** no Windows e no Mac, e **AU** no Mac. AAX: veja abaixo.
 
 ## Fluxo do sinal
@@ -9,7 +23,7 @@ Gera **VST3** e **Standalone** no Windows e no Mac, e **AU** no Mac. AAX: veja a
 entrada → HPF 25 Hz → pré-ênfase (+6 dB @ 800 Hz)
         → [oversampling 4x] → Drive (0 a +40 dB) → soft clip assimétrico (tanh) → [downsample]
         → remove DC + LPF 7 kHz (anti-fizz)
-        → BLEND (sinal limpo, atrasado para alinhar, × saturado)
+        → BLEND (sinal limpo, atrasado para alinhar, × saturado; footswitch DRIVE desligado = só o limpo)
         → LOW (shelf 80 Hz) → MID (pico 600 Hz) → HIGH (shelf 2,5 kHz) → PRESENCE (pico 5 kHz)
         → CAB (HPF 45 Hz, +3 dB @ 110 Hz, −3 dB @ 1,8 kHz, LPF 4,5 kHz 24 dB/oct)
         → LEVEL
@@ -44,36 +58,36 @@ cmake --build build --config Release
 
 O CMake baixa o JUCE 8.0.4 sozinho na primeira vez. Para usar uma cópia local: `-DJUCE_DIR=/caminho/JUCE`.
 
-Os plugins ficam em `build/GritDI_artefacts/Release/`:
+Os plugins ficam em `build/AuraBass_artefacts/Release/`:
 
 | Formato | Para onde copiar |
 |---|---|
-| `VST3/Grit DI.vst3` (Windows) | `C:\Program Files\Common Files\VST3\` |
-| `VST3/Grit DI.vst3` (Mac) | `~/Library/Audio/Plug-Ins/VST3/` |
-| `AU/Grit DI.component` (Mac) | `~/Library/Audio/Plug-Ins/Components/` |
+| `VST3/AURA Bass.vst3` (Windows) | `C:\Program Files\Common Files\VST3\` |
+| `VST3/AURA Bass.vst3` (Mac) | `~/Library/Audio/Plug-Ins/VST3/` |
+| `AU/AURA Bass.component` (Mac) | `~/Library/Audio/Plug-Ins/Components/` |
 | `Standalone/` | roda direto, sem DAW |
 
 **Sem compilador?** O projeto inclui `.github/workflows/build.yml`. Suba a pasta para um repositório no GitHub e a aba *Actions* compila Windows e Mac. Os binários aparecem como *artifacts* para baixar.
 
-No Mac, plugins não assinados podem ser bloqueados. Para uso pessoal: `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Grit DI.component"`. Para distribuir, assine e notarize com uma conta Apple Developer.
+No Mac, plugins não assinados podem ser bloqueados. Para uso pessoal: `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"AURA Bass.component"`. Para distribuir, assine e notarize com uma conta Apple Developer.
 
 ### AAX (Pro Tools)
 
-Exige o AAX SDK (grátis em developer.avid.com) e, para rodar no Pro Tools comum, assinatura PACE/iLok. Em `CMakeLists.txt`, chame `juce_set_aax_sdk_path(...)` e adicione `AAX` em `GRIT_FORMATS`.
+Exige o AAX SDK (grátis em developer.avid.com) e, para rodar no Pro Tools comum, assinatura PACE/iLok. Em `CMakeLists.txt`, chame `juce_set_aax_sdk_path(...)` e adicione `AAX` em `AURA_FORMATS`.
 
 ## Teste do DSP
 
 ```bash
-cmake -B build -DGRIT_BUILD_TESTS=ON
+cmake -B build -DAURA_BUILD_TESTS=ON
 cmake --build build --config Release
-./build/GritDSPTest_artefacts/Release/GritDSPTest
+./build/AuraDSPTest_artefacts/Release/AuraDSPTest
 ```
 
-O teste mede nível e THD em vários valores de Drive. Também verifica NaN/Inf, o alinhamento do Blend, o corte de agudos do Cab e o modo mono. Com `GRIT_SNAPSHOT=ui.png`, ele salva uma imagem da interface.
+O teste mede nível e THD em vários valores de Drive. Também verifica NaN/Inf, o alinhamento do Blend, o footswitch DRIVE (sinal limpo, EQ ativo, troca sem estalo), o corte de agudos do Cab e o modo mono. Com `AURA_SNAPSHOT=ui.png`, ele salva uma imagem da interface.
 
 ## Aproximando o som da referência
 
-As constantes de som ficam no topo de `Source/PluginProcessor.cpp`. Com o Plugin Doctor (ou outro analisador), meça o plugin de referência e o Grit DI com os mesmos ajustes e compare:
+As constantes de som ficam no topo de `Source/PluginProcessor.cpp`. Com o Plugin Doctor (ou outro analisador), meça o plugin de referência e o AURA Bass com os mesmos ajustes e compare:
 
 1. **Resposta de frequência com Drive no mínimo e EQ no meio:** ajuste a pré-ênfase, o `postLpf` e o filtro do cab até as curvas coincidirem.
 2. **Cada knob de EQ no máximo e no mínimo:** ajuste `lowFreq`, `midFreq`, `midQ`, `highFreq`, `presenceFreq` e as faixas em dB.

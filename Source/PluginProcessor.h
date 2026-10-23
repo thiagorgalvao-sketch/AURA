@@ -13,22 +13,35 @@ namespace ParamIDs
     inline constexpr const char* presence = "presence";
     inline constexpr const char* blend    = "blend";
     inline constexpr const char* cab      = "cab";
+    inline constexpr const char* driveOn  = "driveOn";
+}
+
+// Frequências do tone stack (usadas pelo DSP e pela curva de EQ desenhada na tela).
+// Ajuste aqui ao comparar com uma referência no Plugin Doctor (veja o README).
+namespace Tone
+{
+    inline constexpr float lowFreq      = 80.0f;
+    inline constexpr float midFreq      = 600.0f;
+    inline constexpr float midQ         = 0.8f;
+    inline constexpr float highFreq     = 2500.0f;
+    inline constexpr float presenceFreq = 5000.0f;
+    inline constexpr float presenceQ    = 1.0f;
 }
 
 //==============================================================================
-// Grit DI — overdrive de baixo.
+// AURA Bass — overdrive de baixo.
 //
 // Fluxo do sinal:
 //   entrada -> HPF 25 Hz -> pré-ênfase (+médios) -> [4x oversampling]
 //   ganho de Drive -> waveshaper assimétrico -> [downsample]
-//   -> remove DC + LPF anti-fizz -> Blend (limpo x saturado)
+//   -> remove DC + LPF anti-fizz -> Blend (limpo x saturado; DRIVE desligado = só o limpo)
 //   -> Low / Mid / High / Presence -> Cab (opcional) -> Level
 //==============================================================================
-class GritDIAudioProcessor : public juce::AudioProcessor
+class AuraBassAudioProcessor : public juce::AudioProcessor
 {
 public:
-    GritDIAudioProcessor();
-    ~GritDIAudioProcessor() override = default;
+    AuraBassAudioProcessor();
+    ~AuraBassAudioProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
@@ -68,6 +81,7 @@ private:
 
     void setupFixedFilters();
     void updateToneFilters (bool force);
+    float effectiveBlend() const noexcept;
 
     double currentSampleRate = 44100.0;
 
@@ -94,6 +108,7 @@ private:
     std::atomic<float>* pPresence = nullptr;
     std::atomic<float>* pBlend    = nullptr;
     std::atomic<float>* pCab      = nullptr;
+    std::atomic<float>* pDriveOn  = nullptr;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GritDIAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AuraBassAudioProcessor)
 };

@@ -3,14 +3,7 @@
 
 namespace
 {
-    // Faixas e frequências do tone stack. Ajuste aqui ao comparar com a referência
-    // no Plugin Doctor (veja o README).
-    constexpr float lowFreq       = 80.0f;
-    constexpr float midFreq       = 600.0f;
-    constexpr float midQ          = 0.8f;
-    constexpr float highFreq      = 2500.0f;
-    constexpr float presenceFreq  = 5000.0f;
-    constexpr float presenceQ     = 1.0f;
+    using namespace Tone;
 
     constexpr float maxDriveDb    = 40.0f;   // Drive 10 = +40 dB antes do clipper
     constexpr float clipBias      = 0.15f;   // assimetria -> harmônicos pares
@@ -21,7 +14,7 @@ namespace
 }
 
 //==============================================================================
-GritDIAudioProcessor::GritDIAudioProcessor()
+AuraBassAudioProcessor::AuraBassAudioProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
@@ -35,9 +28,10 @@ GritDIAudioProcessor::GritDIAudioProcessor()
     pPresence = apvts.getRawParameterValue (ParamIDs::presence);
     pBlend    = apvts.getRawParameterValue (ParamIDs::blend);
     pCab      = apvts.getRawParameterValue (ParamIDs::cab);
+    pDriveOn  = apvts.getRawParameterValue (ParamIDs::driveOn);
 }
 
-juce::AudioProcessorValueTreeState::ParameterLayout GritDIAudioProcessor::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::createParameterLayout()
 {
     using namespace juce;
     std::vector<std::unique_ptr<RangedAudioParameter>> p;
@@ -61,11 +55,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout GritDIAudioProcessor::create
                      NormalisableRange<float> (0.0f, 100.0f, 0.1f), 100.0f,
                      AudioParameterFloatAttributes().withLabel ("%")));
     p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::cab, 1 }, "Cab", true));
+    p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::driveOn, 1 }, "Drive On", true));
 
     return { p.begin(), p.end() };
 }
 
-bool GritDIAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool AuraBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     const auto& out = layouts.getMainOutputChannelSet();
     if (out != juce::AudioChannelSet::mono() && out != juce::AudioChannelSet::stereo())
@@ -74,7 +69,14 @@ bool GritDIAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) c
 }
 
 //==============================================================================
-float GritDIAudioProcessor::shape (float x) noexcept
+// Com o DRIVE desligado o Blend vai a 0% (só o sinal limpo, já alinhado), com
+// crossfade de 50 ms: sem cliques e sem mudar a latência. EQ, Cab e Level seguem ativos.
+float AuraBassAudioProcessor::effectiveBlend() const noexcept
+{
+    return pDriveOn->load() > 0.5f ? pBlend->load() / 100.0f : 0.0f;
+}
+
+float AuraBassAudioProcessor::shape (float x) noexcept
 {
     // Soft clip assimétrico: satura antes no semiciclo positivo, gerando
     // harmônicos pares (caráter "valvulado"). O DC resultante é removido depois.
@@ -82,7 +84,7 @@ float GritDIAudioProcessor::shape (float x) noexcept
     return std::tanh (x + clipBias) - offset;
 }
 
-void GritDIAudioProcessor::setupFixedFilters()
+void AuraBassAudioProcessor::setupFixedFilters()
 {
     const auto sr = currentSampleRate;
 
@@ -99,7 +101,7 @@ void GritDIAudioProcessor::setupFixedFilters()
     *cabLpf2.state     = Coefs::makeLowPass    (sr, 4500.0f, 1.31f);  // par Butterworth -> 24 dB/oct
 }
 
-void GritDIAudioProcessor::updateToneFilters (bool force)
+void AuraBassAudioProcessor::updateToneFilters (bool force)
 {
     const auto sr = currentSampleRate;
     const float low = pLow->load(), mid = pMid->load(), high = pHigh->load(), pres = pPresence->load();
@@ -114,7 +116,7 @@ void GritDIAudioProcessor::updateToneFilters (bool force)
         *presencePeak.state = Coefs::makePeakFilter (sr, presenceFreq, presenceQ, dbToGain (lastPresence = pres));
 }
 
-void GritDIAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void AuraBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     currentSampleRate = sampleRate;
     const auto numChannels = (juce::uint32) juce::jmax (getTotalNumInputChannels(), getTotalNumOutputChannels());
@@ -150,7 +152,7 @@ void GritDIAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     driveGain.reset (osRate, 0.05);
     driveGain.setCurrentAndTargetValue (dbToGain (pDrive->load() / 10.0f * maxDriveDb));
     blendMix.reset (sampleRate, 0.05);
-    blendMix.setCurrentAndTargetValue (pBlend->load() / 100.0f);
+    blendMix.setCurrentAndTargetValue (effectiveBlend());
     cabMix.reset (sampleRate, 0.03);
     cabMix.setCurrentAndTargetValue (pCab->load() > 0.5f ? 1.0f : 0.0f);
     outputGain.reset (sampleRate, 0.05);
@@ -158,7 +160,7 @@ void GritDIAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
 }
 
 //==============================================================================
-void GritDIAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -182,7 +184,7 @@ void GritDIAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     updateToneFilters (false);
     driveGain.setTargetValue (dbToGain (pDrive->load() / 10.0f * maxDriveDb));
-    blendMix.setTargetValue (pBlend->load() / 100.0f);
+    blendMix.setTargetValue (effectiveBlend());
     cabMix.setTargetValue (pCab->load() > 0.5f ? 1.0f : 0.0f);
     outputGain.setTargetValue (dbToGain (pLevel->load()));
 
@@ -261,25 +263,25 @@ void GritDIAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 }
 
 //==============================================================================
-void GritDIAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void AuraBassAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     if (auto xml = apvts.copyState().createXml())
         copyXmlToBinary (*xml, destData);
 }
 
-void GritDIAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void AuraBassAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (auto xml = getXmlFromBinary (data, sizeInBytes))
         if (xml->hasTagName (apvts.state.getType()))
             apvts.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
-juce::AudioProcessorEditor* GritDIAudioProcessor::createEditor()
+juce::AudioProcessorEditor* AuraBassAudioProcessor::createEditor()
 {
-    return new GritDIAudioProcessorEditor (*this);
+    return new AuraBassAudioProcessorEditor (*this);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new GritDIAudioProcessor();
+    return new AuraBassAudioProcessor();
 }

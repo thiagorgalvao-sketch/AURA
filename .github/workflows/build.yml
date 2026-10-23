@@ -22,25 +22,25 @@ jobs:
 
       - name: Montar pacote
         run: |
-          ART="build/GritDI_artefacts/Release"
-          PKG="dist/GritDI-Mac"
+          ART="build/AuraBass_artefacts/Release"
+          PKG="dist/AuraBass-Mac"
           mkdir -p "$PKG"
-          cp -R "$ART/VST3/Grit DI.vst3" "$PKG/"
-          cp -R "$ART/AU/Grit DI.component" "$PKG/"
-          cp -R "$ART/Standalone/Grit DI.app" "$PKG/"
+          cp -R "$ART/VST3/AURA Bass.vst3" "$PKG/"
+          cp -R "$ART/AU/AURA Bass.component" "$PKG/"
+          cp -R "$ART/Standalone/AURA Bass.app" "$PKG/"
           for b in "$PKG"/*.vst3 "$PKG"/*.component "$PKG"/*.app; do
             codesign --force --deep --sign - "$b"
           done
           cp "packaging/Instalar no Mac.command" "$PKG/"
           chmod +x "$PKG/Instalar no Mac.command"
-          lipo -info "$PKG/Grit DI.component/Contents/MacOS/Grit DI"
+          lipo -info "$PKG/AURA Bass.component/Contents/MacOS/AURA Bass"
           # ditto preserva permissões e assinaturas dos bundles
-          ditto -c -k --keepParent "$PKG" dist/GritDI-Mac.zip
+          ditto -c -k --keepParent "$PKG" dist/AuraBass-Mac.zip
 
       - name: Validar AU
         run: |
           mkdir -p ~/Library/Audio/Plug-Ins/Components
-          cp -R "build/GritDI_artefacts/Release/AU/Grit DI.component" ~/Library/Audio/Plug-Ins/Components/
+          cp -R "build/AuraBass_artefacts/Release/AU/AURA Bass.component" ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar || true
           sleep 2
           auval -v aufx Grdi Thgo
@@ -48,8 +48,8 @@ jobs:
       - name: Enviar
         uses: actions/upload-artifact@v4
         with:
-          name: GritDI-Mac
-          path: dist/GritDI-Mac.zip
+          name: AuraBass-Mac
+          path: dist/AuraBass-Mac.zip
 
       - name: Publicar no Release "latest" (link de download direto)
         if: github.ref == 'refs/heads/main'
@@ -57,9 +57,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag 2>/dev/null || true
-          gh release create latest dist/GritDI-Mac.zip \
-            --title "Grit DI — versão mais recente" \
-            --notes "Baixe GritDI-Mac.zip, descompacte e rode no Terminal: bash (espaço) + arraste 'Instalar no Mac.command' + Enter." \
+          gh release create latest dist/AuraBass-Mac.zip \
+            --title "AURA Bass — versão mais recente" \
+            --notes "Baixe AuraBass-Mac.zip, descompacte e rode no Terminal: bash (espaço) + arraste 'Instalar no Mac.command' + Enter." \
             --target "${{ github.sha }}"
 
   windows:
@@ -77,7 +77,7 @@ jobs:
       - name: Enviar
         uses: actions/upload-artifact@v4
         with:
-          name: GritDI-Windows
+          name: AuraBass-Windows
           path: |
-            build/GritDI_artefacts/Release/VST3
-            build/GritDI_artefacts/Release/Standalone
+            build/AuraBass_artefacts/Release/VST3
+            build/AuraBass_artefacts/Release/Standalone

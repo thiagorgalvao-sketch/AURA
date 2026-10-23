@@ -9,14 +9,14 @@ namespace
     constexpr double sr = 48000.0;
     constexpr int blockSize = 512;
 
-    void setParam (GritDIAudioProcessor& p, const char* id, float value)
+    void setParam (AuraBassAudioProcessor& p, const char* id, float value)
     {
         auto* param = p.apvts.getParameter (id);
         param->setValueNotifyingHost (param->convertTo0to1 (value));
     }
 
     // Processa 1 s de senoide e devolve a saída (descartando o primeiro 0,5 s)
-    std::vector<float> run (GritDIAudioProcessor& p, float freq, float amp, std::vector<float>* inputOut = nullptr)
+    std::vector<float> run (AuraBassAudioProcessor& p, float freq, float amp, std::vector<float>* inputOut = nullptr)
     {
         p.prepareToPlay (sr, blockSize);
         const int total = (int) sr;
@@ -76,7 +76,7 @@ int main()
     std::printf ("Drive x nível/THD (senoide 100 Hz, -12 dBFS, cab desligado, EQ plano)\n");
     for (float drive : { 0.0f, 2.5f, 5.0f, 7.5f, 10.0f })
     {
-        GritDIAudioProcessor p;
+        AuraBassAudioProcessor p;
         setParam (p, ParamIDs::cab, 0.0f);
         setParam (p, ParamIDs::presence, 0.0f);
         setParam (p, ParamIDs::drive, drive);
@@ -92,7 +92,7 @@ int main()
 
     std::printf ("Blend 0%% = sinal limpo alinhado (sem phasing)\n");
     {
-        GritDIAudioProcessor p;
+        AuraBassAudioProcessor p;
         setParam (p, ParamIDs::cab, 0.0f);
         setParam (p, ParamIDs::presence, 0.0f);
         setParam (p, ParamIDs::blend, 0.0f);
@@ -117,7 +117,7 @@ int main()
 
     std::printf ("Cab ligado atenua agudos\n");
     {
-        GritDIAudioProcessor a, b;
+        AuraBassAudioProcessor a, b;
         setParam (a, ParamIDs::cab, 0.0f); setParam (b, ParamIDs::cab, 1.0f);
         const double off = rms (run (a, 8000.0f, 0.1f), from), on = rms (run (b, 8000.0f, 0.1f), from);
         std::printf ("  8 kHz: sem cab %.1f dB, com cab %.1f dB\n",
@@ -125,9 +125,70 @@ int main()
         check (on < off * 0.25, "cab corta pelo menos 12 dB em 8 kHz");
     }
 
+    std::printf ("Botão DRIVE desligado = só EQ/Cab (sinal limpo alinhado)\n");
+    {
+        AuraBassAudioProcessor p;
+        setParam (p, ParamIDs::cab, 0.0f);
+        setParam (p, ParamIDs::presence, 0.0f);
+        setParam (p, ParamIDs::blend, 100.0f);
+        setParam (p, ParamIDs::drive, 10.0f);
+        setParam (p, ParamIDs::driveOn, 0.0f);
+        std::vector<float> in;
+        auto out = run (p, 100.0f, 0.25f, &in);
+        juce::dsp::IIR::Filter<float> hpf;
+        hpf.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass (sr, 25.0f, 0.707f);
+        for (auto& x : in) x = hpf.processSample (x);
+        const int lat = p.getLatencySamples();
+        double err = 0;
+        for (size_t i = from; i < out.size(); ++i) err = std::max (err, (double) std::abs (out[i] - in[i - (size_t) lat]));
+        const double h1 = harmonic (out, from, 100), h3 = harmonic (out, from, 300);
+        std::printf ("  erro vs. limpo %.6f, H3 %.1f dB\n", err, juce::Decibels::gainToDecibels (h3 / h1 + 1e-12));
+        check (err < 1.0e-4, "DRIVE off ignora Drive 10 e Blend 100%");
+        check (finite (out), "sem NaN/Inf");
+    }
+
+    std::printf ("Botão DRIVE desligado mantém o EQ ativo\n");
+    {
+        AuraBassAudioProcessor a, b;
+        for (auto* p : { &a, &b }) { setParam (*p, ParamIDs::cab, 0.0f); setParam (*p, ParamIDs::presence, 0.0f); setParam (*p, ParamIDs::driveOn, 0.0f); }
+        setParam (b, ParamIDs::low, 12.0f);
+        const double flat = rms (run (a, 50.0f, 0.1f), from), boosted = rms (run (b, 50.0f, 0.1f), from);
+        std::printf ("  50 Hz com Low +12: %+.1f dB\n", juce::Decibels::gainToDecibels (boosted / flat));
+        check (boosted > flat * 2.0, "Low continua atuando com o DRIVE desligado");
+    }
+
+    std::printf ("Troca de DRIVE no meio do som sem estalo\n");
+    {
+        AuraBassAudioProcessor p;
+        setParam (p, ParamIDs::cab, 0.0f);
+        p.prepareToPlay (sr, blockSize);
+        juce::AudioBuffer<float> buf (2, blockSize); juce::MidiBuffer midi;
+        std::vector<float> out;
+        for (int blk = 0; blk < 200; ++blk)
+        {
+            if (blk == 100) setParam (p, ParamIDs::driveOn, 0.0f);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float x = 0.25f * (float) std::sin (2.0 * juce::MathConstants<double>::pi * 100.0 * (blk * blockSize + i) / sr);
+                buf.setSample (0, i, x); buf.setSample (1, i, x);
+            }
+            p.processBlock (buf, midi);
+            for (int i = 0; i < blockSize; ++i) out.push_back (buf.getSample (0, i));
+        }
+        double maxStep = 0, maxStepAround = 0;
+        for (size_t i = 1; i < out.size(); ++i)
+        {
+            const double d = std::abs (out[i] - out[i - 1]);
+            if (i > 20000 && i < 50000) maxStep = std::max (maxStep, d);
+            if (i > 51000 && i < 53000) maxStepAround = std::max (maxStepAround, d);
+        }
+        std::printf ("  maior salto entre amostras: antes %.4f, na troca %.4f\n", maxStep, maxStepAround);
+        check (maxStepAround <= maxStep * 1.05, "sem descontinuidade na troca");
+    }
+
     std::printf ("Mono\n");
     {
-        GritDIAudioProcessor p;
+        AuraBassAudioProcessor p;
         juce::AudioProcessor::BusesLayout mono;
         mono.inputBuses.add (juce::AudioChannelSet::mono());
         mono.outputBuses.add (juce::AudioChannelSet::mono());
@@ -140,9 +201,9 @@ int main()
     }
 
     // Salva uma imagem da interface (útil para conferir o layout sem abrir um host)
-    if (auto* outPath = std::getenv ("GRIT_SNAPSHOT"))
+    if (auto* outPath = std::getenv ("AURA_SNAPSHOT"))
     {
-        GritDIAudioProcessor p;
+        AuraBassAudioProcessor p;
         std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());
         auto img = ed->createComponentSnapshot (ed->getLocalBounds(), true, 2.0f);
         juce::File file (outPath);
