@@ -75,6 +75,31 @@ No Mac, plugins não assinados podem ser bloqueados. Para uso pessoal: `xattr -d
 
 Exige o AAX SDK (grátis em developer.avid.com) e, para rodar no Pro Tools comum, assinatura PACE/iLok. Em `CMakeLists.txt`, chame `juce_set_aax_sdk_path(...)` e adicione `AAX` em `AURA_FORMATS`.
 
+## Interface fotorrealista
+
+O painel não é desenhado por código. Ele é **renderizado** com iluminação física pelo programa em `Tools/AuraRender`, um pequeno renderizador escrito para este projeto. Ele usa:
+- microfacetas GGX anisotrópicas para o alumínio escovado e torneado e para o cromado;
+- um ambiente de estúdio com softboxes;
+- uma luz principal com sombras suaves;
+- uma câmera levemente inclinada, que mostra as laterais serrilhadas dos knobs.
+
+As imagens ficam em `Resources/ui/` e vão embutidas no plugin:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `background.jpg` | painel completo em 2x (1960×940) |
+| `knob_0/1/2.jpg` + `_mask.png` | 81 quadros por tamanho de knob (grande, médio, pequeno) |
+| `switch_N_down.jpg` | footswitch pressionado |
+| `led_N_on.jpg` | LED aceso, com o brilho refletido no metal |
+
+A posição de cada elemento vem de `Source/Layout.h`, compartilhado entre o renderizador e a interface. Para mudar o visual (layout, textos, luz ou materiais), edite esses arquivos e gere as imagens de novo:
+
+```bash
+cmake -B build -DAURA_BUILD_RENDERER=ON
+cmake --build build --target AuraRender --config Release
+./build/AuraRender_artefacts/Release/AuraRender Resources/ui 40   # 40 amostras/pixel, ~15 min
+```
+
 ## Teste do DSP
 
 ```bash
