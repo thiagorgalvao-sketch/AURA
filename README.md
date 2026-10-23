@@ -11,10 +11,10 @@ Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presen
 | **LOW / MID / HIGH** | Shelf 80 Hz / pico 600 Hz / shelf 2,5 kHz, ±12 dB |
 | **PRESENCE** | Pico em 5 kHz, 0 a +12 dB |
 | **LEVEL** | Volume de saída, −24 a +12 dB |
-| **Footswitch DRIVE** | Liga/desliga só a distorção. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
-| **Footswitch CAB** | Liga/desliga a simulação de caixa |
+| **Botão DRIVE** (power, LED azul) | Liga/desliga só a distorção. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
+| **Chave CAB** (LED laranja) | Liga/desliga a simulação de caixa |
 
-O valor de cada knob aparece no rótulo enquanto você gira. Duplo clique volta o knob ao valor padrão.
+O valor de cada knob aparece embaixo dele. Duplo clique volta o knob ao valor padrão.
 Gera **VST3** e **Standalone** no Windows e no Mac, e **AU** no Mac. AAX: veja abaixo.
 
 ## Fluxo do sinal
@@ -75,30 +75,24 @@ No Mac, plugins não assinados podem ser bloqueados. Para uso pessoal: `xattr -d
 
 Exige o AAX SDK (grátis em developer.avid.com) e, para rodar no Pro Tools comum, assinatura PACE/iLok. Em `CMakeLists.txt`, chame `juce_set_aax_sdk_path(...)` e adicione `AAX` em `AURA_FORMATS`.
 
-## Interface fotorrealista
+## Interface
 
-O painel não é desenhado por código. Ele é **renderizado** com iluminação física pelo programa em `Tools/AuraRender`, um pequeno renderizador escrito para este projeto. Ele usa:
-- microfacetas GGX anisotrópicas para o alumínio escovado e torneado e para o cromado;
-- um ambiente de estúdio com softboxes;
-- uma luz principal com sombras suaves;
-- uma câmera levemente inclinada, que mostra as laterais serrilhadas dos knobs.
-
-As imagens ficam em `Resources/ui/` e vão embutidas no plugin:
+A interface usa a arte de referência do painel: placa de metal escuro escovado, moldura cromada, knobs serrilhados com arco, botão DRIVE com LED azul e chave alavanca do CAB com LED laranja. O script `Tools/build_ui_assets.py` monta as imagens em `Resources/ui/` a partir de `Resources/mockup/`, comparando o painel completo com a placa vazia (as duas imagens são alinhadas):
 
 | Arquivo | Conteúdo |
 |---|---|
-| `background.jpg` | painel completo em 2x (1960×940) |
-| `knob_0/1/2.jpg` + `_mask.png` | 81 quadros por tamanho de knob (grande, médio, pequeno) |
-| `switch_N_down.jpg` | footswitch pressionado |
-| `led_N_on.jpg` | LED aceso, com o brilho refletido no metal |
+| `background.jpg` | painel em 2x, sem os indicadores dos knobs e sem os valores, LEDs apagados, com o nome AURA BASS (Russo One, com desgaste) |
+| `pointer.png` | indicador do knob, que gira conforme o valor |
+| `led_drive_on.png`, `led_cab_on.png` | LEDs acesos |
+| `cab_off.png` | chave do CAB na outra posição (alavanca espelhada) |
 
-A posição de cada elemento vem de `Source/Layout.h`, compartilhado entre o renderizador e a interface. Para mudar o visual (layout, textos, luz ou materiais), edite esses arquivos e gere as imagens de novo:
+Os valores embaixo dos knobs são desenhados ao vivo com a fonte Roboto. As posições ficam em `Source/Layout.h`. Para gerar as imagens de novo depois de mudar a arte ou os textos:
 
 ```bash
-cmake -B build -DAURA_BUILD_RENDERER=ON
-cmake --build build --target AuraRender --config Release
-./build/AuraRender_artefacts/Release/AuraRender Resources/ui 40   # 40 amostras/pixel, ~15 min
+python3 Tools/build_ui_assets.py
 ```
+
+Fontes incluídas: Russo One e Roboto, ambas sob a SIL Open Font License (`Resources/fonts`).
 
 ## Teste do DSP
 

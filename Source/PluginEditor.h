@@ -5,39 +5,36 @@
 #include "Layout.h"
 
 //==============================================================================
-// Imagens pré-renderizadas (Tools/AuraRender), carregadas uma vez e compartilhadas
-// entre todas as instâncias do plugin.
+// Imagens da interface (Resources/ui) e fonte dos valores, compartilhadas entre instâncias
 struct AuraAssets
 {
     AuraAssets();
 
-    juce::Image background;
-    std::array<juce::Image, 3> knobStrips;     // ARGB, quadros empilhados na vertical
-    std::array<int, 3> knobFrameHeight {};
-    std::array<juce::Image, 2> switchDown, ledOn;
+    juce::Image background, pointer, ledDriveOn, ledCabOn, cabOff;
+    juce::Typeface::Ptr valueTypeface;
 };
 
 //==============================================================================
-// Knob que desenha o quadro pré-renderizado correspondente ao valor
-class FilmstripKnob : public juce::Slider
+// Knob: a arte já está no fundo; aqui só o indicador gira
+class PointerKnob : public juce::Slider
 {
 public:
-    FilmstripKnob (const AuraAssets&, int knobClass);
+    explicit PointerKnob (const AuraAssets&);
     void paint (juce::Graphics&) override;
+    bool hitTest (int x, int y) override;
 
-    double lastTouched = -100.0;
+    juce::Point<float> centre;   // centro exato do knob, em coordenadas locais
 
 private:
     const AuraAssets& assets;
-    int cls;
 };
 
 //==============================================================================
-// Área clicável invisível sobre o footswitch renderizado
-class InvisibleFootswitch : public juce::ToggleButton
+// Área clicável invisível (botão DRIVE e chave do CAB)
+class HotSpot : public juce::ToggleButton
 {
 public:
-    InvisibleFootswitch() { setMouseCursor (juce::MouseCursor::PointingHandCursor); }
+    HotSpot() { setMouseCursor (juce::MouseCursor::PointingHandCursor); }
     void paintButton (juce::Graphics&, bool, bool) override {}
 };
 
@@ -60,12 +57,12 @@ private:
     AuraBassAudioProcessor& processor;
     juce::SharedResourcePointer<AuraAssets> assets;
 
-    std::vector<std::unique_ptr<FilmstripKnob>> knobs;
+    std::vector<std::unique_ptr<PointerKnob>> knobs;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> knobAttachments;
 
-    std::array<InvisibleFootswitch, 2> switches;
-    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> switchAttachments;
-    std::array<bool, 2> ledState { false, false };
+    HotSpot driveSpot, cabSpot;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> driveAttachment, cabAttachment;
+    bool driveOn = true, cabOn = true;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AuraBassAudioProcessorEditor)
 };

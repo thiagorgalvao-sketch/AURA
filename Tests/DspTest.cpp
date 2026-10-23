@@ -204,6 +204,13 @@ int main()
     if (auto* outPath = std::getenv ("AURA_SNAPSHOT"))
     {
         AuraBassAudioProcessor p;
+        if (std::getenv ("AURA_SNAPSHOT_OFF") != nullptr)
+        {
+            setParam (p, ParamIDs::driveOn, 0.0f);
+            setParam (p, ParamIDs::cab, 0.0f);
+            setParam (p, ParamIDs::drive, 8.5f);
+            setParam (p, ParamIDs::low, -12.0f);
+        }
         std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());
         auto img = ed->createComponentSnapshot (ed->getLocalBounds(), true, 2.0f);
         juce::File file (outPath);

@@ -49,19 +49,14 @@ juce_add_plugin(AuraBass
     VST3_CATEGORIES             Fx Distortion
     AU_MAIN_TYPE                kAudioUnitType_Effect)
 
-# Imagens fotorrealistas da interface (geradas por Tools/AuraRender)
+# Imagens da interface (montadas por Tools/build_ui_assets.py a partir de Resources/mockup)
 juce_add_binary_data(AuraAssets SOURCES
     Resources/ui/background.jpg
-    Resources/ui/knob_0.jpg
-    Resources/ui/knob_0_mask.png
-    Resources/ui/knob_1.jpg
-    Resources/ui/knob_1_mask.png
-    Resources/ui/knob_2.jpg
-    Resources/ui/knob_2_mask.png
-    Resources/ui/switch_0_down.jpg
-    Resources/ui/switch_1_down.jpg
-    Resources/ui/led_0_on.jpg
-    Resources/ui/led_1_on.jpg)
+    Resources/ui/pointer.png
+    Resources/ui/led_drive_on.png
+    Resources/ui/led_cab_on.png
+    Resources/ui/cab_off.png
+    Resources/fonts/Roboto.ttf)
 
 target_sources(AuraBass PRIVATE
     Source/PluginProcessor.cpp
@@ -102,17 +97,4 @@ if(AURA_BUILD_TESTS)
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_recommended_config_flags)
-endif()
-
-# ---------------------------------------------------------------------------
-# Renderizador das imagens da interface (opcional): cmake -DAURA_BUILD_RENDERER=ON ...
-# As imagens geradas ficam versionadas em Resources/, então não é preciso rodá-lo
-# para compilar o plugin.
-# ---------------------------------------------------------------------------
-option(AURA_BUILD_RENDERER "Compila o renderizador das imagens da interface" OFF)
-if(AURA_BUILD_RENDERER)
-    juce_add_console_app(AuraRender PRODUCT_NAME "AuraRender")
-    target_sources(AuraRender PRIVATE Tools/AuraRender/Main.cpp)
-    target_compile_definitions(AuraRender PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
-    target_link_libraries(AuraRender PRIVATE juce::juce_graphics juce::juce_recommended_config_flags)
 endif()

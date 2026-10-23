@@ -1,77 +1,41 @@
 #pragma once
 
-// Geometria do painel do AURA Bass, em unidades de interface (1 unidade = 1 px lógico).
-// É usada tanto pelo renderizador das imagens (Tools/AuraRender) quanto pelo editor,
-// garantindo que knobs e footswitches fiquem exatamente sobre o que foi renderizado.
+// Geometria do painel do AURA Bass em unidades de interface (1 unidade = 1 px lógico).
+// As imagens em Resources/ui são 2x. As coordenadas vêm da arte de referência
+// (Resources/mockup, recortada em Tools/build_ui_assets.py): unidade = (px - recorte) / 2.
 namespace AuraLayout
 {
-    inline constexpr int width  = 980;
-    inline constexpr int height = 470;
-    inline constexpr int renderScale = 2;            // imagens em 2x (telas Retina)
+    inline constexpr int width  = 726;
+    inline constexpr int height = 339;
 
-    inline constexpr float chassisX = 8.0f, chassisY = 8.0f;
-    inline constexpr float chassisW = 964.0f, chassisH = 454.0f;
-    inline constexpr float chassisCorner = 24.0f;
-
-    // Três tamanhos de knob (cada um tem sua própria sequência de quadros)
-    struct KnobClass { float radius; float height; };
-    inline constexpr KnobClass knobClasses[3] = {
-        { 62.0f, 24.0f },   // grande  (Drive, Level)
-        { 46.0f, 21.0f },   // médio   (Blend)
-        { 36.0f, 19.0f },   // pequeno (Low, Mid, High, Presence)
-    };
-    inline constexpr int knobFrames = 81;
-    inline constexpr float knobMinAngleDeg = -135.0f, knobMaxAngleDeg = 135.0f;
-    inline constexpr float knobFrameMargin = 3.0f;   // borda extra em volta do knob em cada quadro
-
-    struct Knob { const char* paramId; const char* label; float cx, cy; int cls; };
+    struct Knob { const char* paramId; float cx, cy; float valueX; };
     inline constexpr Knob knobs[7] = {
-        { "drive",    "DRIVE",    143.0f, 142.0f, 0 },
-        { "blend",    "BLEND",    282.0f, 142.0f, 1 },
-        { "low",      "LOW",      411.5f, 142.0f, 2 },
-        { "mid",      "MID",      510.5f, 142.0f, 2 },
-        { "high",     "HIGH",     609.5f, 142.0f, 2 },
-        { "presence", "PRESENCE", 708.5f, 142.0f, 2 },
-        { "level",    "LEVEL",    861.0f, 142.0f, 0 },
+        { "level",     71.50f, 192.50f,  74.5f },
+        { "drive",    159.25f, 194.50f, 162.0f },
+        { "low",      247.75f, 192.50f, 249.0f },
+        { "mid",      336.00f, 192.50f, 336.5f },
+        { "high",     424.50f, 192.50f, 423.5f },
+        { "presence", 513.50f, 192.75f, 510.5f },
+        { "blend",    601.00f, 192.25f, 598.0f },
     };
-    inline constexpr float knobLabelY = 246.0f;
+    inline constexpr float knobHitRadius = 34.0f;
+    inline constexpr float knobMinAngleDeg = -135.0f, knobMaxAngleDeg = 135.0f;
+    inline constexpr float pointerHalf = 24.0f;      // quadro do indicador (pointer.png) = 48x48
+    inline constexpr float valueY = 252.0f;          // centro vertical dos valores
+    inline constexpr float valueFontSize = 14.0f;
 
-    struct Group { const char* title; float x1, x2; };
-    inline constexpr Group groups[3] = {
-        { "OVERDRIVE", 44.0f, 334.0f },
-        { "TONE",      362.0f, 758.0f },
-        { "OUTPUT",    786.0f, 936.0f },
-    };
-    inline constexpr float groupTitleY = 41.0f;
-    inline constexpr float separatorY = 270.0f;
-
-    struct Switch { const char* paramId; const char* label; float cx, cy, ledX, ledY; };
-    inline constexpr Switch switches[2] = {
-        { "driveOn", "DRIVE", 205.0f, 362.0f, 205.0f, 293.0f },
-        { "cab",     "CAB",   775.0f, 362.0f, 775.0f, 293.0f },
-    };
-    inline constexpr float switchRadius = 44.0f;     // porca sextavada (até os cantos)
-    inline constexpr float switchLabelY = 426.0f;
-    inline constexpr float ledRadius = 6.0f;
-
-    // Recortes (em unidades) das variações pré-renderizadas
-    inline constexpr float switchCropHalf = 56.0f;   // footswitch pressionado
-    inline constexpr float ledCropHalf    = 26.0f;   // LED aceso (com brilho no metal)
-
-    inline constexpr float wordmarkX = 490.0f, wordmarkY = 340.0f, taglineY = 380.0f;
-
-    // Câmera levemente inclinada (projeção oblíqua): um ponto a altura z aparece
-    // z * obliqueK unidades mais acima na tela. Por isso as laterais dos knobs aparecem.
-    inline constexpr float obliqueK = 0.45f;
-
-    // (cx, cy) de cada knob é o centro do TOPO na tela; a base fica mais abaixo
-    constexpr float knobBaseY (const Knob& k) { return k.cy + knobClasses[k.cls].height * obliqueK; }
-
-    // Retângulo (na tela) de cada quadro da sequência do knob
+    // Botão DRIVE (power + LED azul + rótulo)
+    inline constexpr float driveButtonX = 59.5f, driveButtonY = 91.5f, driveButtonRadius = 15.5f;
+    inline constexpr float driveLedX = 87.5f, driveLedY = 91.5f;
     struct Rect { float x, y, w, h; };
-    constexpr Rect knobFrameRect (const Knob& k)
-    {
-        const float r = knobClasses[k.cls].radius + knobFrameMargin;
-        return { k.cx - r, k.cy - r, 2.0f * r, 2.0f * r + knobClasses[k.cls].height * obliqueK };
-    }
+    inline constexpr Rect driveHit { 43.0f, 74.0f, 92.0f, 35.0f };
+
+    // CAB (rótulo, LED laranja e chave alavanca)
+    inline constexpr float cabLedX = 671.35f, cabLedY = 158.65f;
+    inline constexpr float cabToggleX = 671.5f, cabToggleY = 195.0f;
+    inline constexpr Rect cabHit { 648.0f, 128.0f, 48.0f, 94.0f };
+
+    // Sobreposições (meio lado em unidades)
+    inline constexpr float ledHalf = 16.0f;
+    inline constexpr float toggleHalf = 25.0f;
 }
