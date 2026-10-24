@@ -13,6 +13,7 @@ Saídas (Resources/ui), todas em 2x:
                       chave do CAB ligada, com o nome AURA BASS
   pointer.png         indicador do knob (gira na interface), centrado no quadro
   led_drive_on.png    LED azul aceso (sobreposição)
+  footswitch_down.png footswitch do DRIVE pressionado (sobreposição)
   led_cab_on.png      LED laranja aceso (sobreposição)
   cab_off.png         chave do CAB desligada (alavanca espelhada, sobreposição)
 
@@ -42,7 +43,14 @@ REF_KNOB = 3                              # MID: indicador exatamente para cima
 VALUE_RECTS = [(150, 745, 300, 790), (325, 745, 475, 790), (500, 745, 650, 790), (675, 745, 825, 790),
                (850, 745, 1000, 790), (1020, 745, 1180, 790), (1195, 745, 1350, 790)]
 
-LED_DRIVE = (249.0, 445.0, 9.5)           # x, y, raio da lente
+LED_DRIVE = (249.0, 445.0, 9.5)           # x, y, raio da lente (posição original na arte)
+
+# Footswitch do DRIVE (renderizado por Tools/FootswitchRender) e nova posição do LED azul
+FS_CENTER = (190.0, 452.0)
+FS_WIPE = (145, 398, 352, 494)            # região do antigo botão power + LED + rótulo
+FS_DOWN_HALF = 48
+LED_DRIVE_NEW = (266.0, 452.0)
+LED_DRIVE_HALF = 22
 LED_CAB = (1416.7, 579.3, 9.0)
 LED_HALF = 32                             # meio lado do recorte do LED (px)
 
@@ -229,11 +237,52 @@ def main():
     for r in VALUE_RECTS:
         erase_text(img, plate, r)
 
-    # 3) Sobreposições dos LEDs acesos (da arte original) e LEDs apagados no fundo
-    led_drive_on = crop_rgba(layout, LED_DRIVE[0], LED_DRIVE[1], LED_HALF)
+    # 3) LED do CAB: aceso (sobreposição) e apagado no fundo
     led_cab_on = crop_rgba(layout, LED_CAB[0], LED_CAB[1], LED_HALF)
-    led_off(img, plate, *LED_DRIVE, tint=(40, 90, 200))
     led_off(img, plate, *LED_CAB, tint=(200, 100, 30))
+
+    # 3b) Botão DRIVE: troca o botão power por um footswitch de pisar
+    def radial_alpha(half, inner, outer):
+        ys, xs = np.mgrid[0:2 * half, 0:2 * half].astype(np.float32)
+        d = np.sqrt((xs + 0.5 - half) ** 2 + (ys + 0.5 - half) ** 2)
+        return smoothstep(outer, inner, d)[..., None]
+
+    def paste(dst, patch, cx, cy, alpha):
+        h = patch.shape[0] // 2
+        x0, y0 = int(round(cx)) - h, int(round(cy)) - h
+        dst[y0:y0 + 2 * h, x0:x0 + 2 * h] = dst[y0:y0 + 2 * h, x0:x0 + 2 * h] * (1 - alpha) + patch * alpha
+
+    def crop(src, cx, cy, half):
+        x0, y0 = int(round(cx)) - half, int(round(cy)) - half
+        return src[y0:y0 + 2 * half, x0:x0 + 2 * half].copy()
+
+    # LED azul: aceso (da arte) e apagado (sintetizado), movidos para a nova posição
+    led_on_patch = crop(layout, LED_DRIVE[0], LED_DRIVE[1], LED_DRIVE_HALF)
+    tmp = layout.copy()
+    led_off(tmp, plate, *LED_DRIVE, tint=(40, 90, 200))
+    led_off_patch = crop(tmp, LED_DRIVE[0], LED_DRIVE[1], LED_DRIVE_HALF)
+
+    # Apaga o botão antigo (volta à placa vazia, com borda suave)
+    x0, y0, x1, y1 = FS_WIPE
+    ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    edge = np.minimum.reduce([xs - x0, x1 - 1 - xs, ys - y0, y1 - 1 - ys])
+    wa = smoothstep(0, 10, edge)[..., None]
+    img[y0:y1, x0:x1] = img[y0:y1, x0:x1] * (1 - wa) + plate[y0:y1, x0:x1] * wa
+
+    # Sombra do footswitch na placa
+    fs_up = np.asarray(Image.open(os.path.join(MOCK, "footswitch_up.png")).convert("RGBA")).astype(np.float32)
+    fs_down = np.asarray(Image.open(os.path.join(MOCK, "footswitch_down.png")).convert("RGBA")).astype(np.float32)
+    fs_shadow = np.asarray(Image.open(os.path.join(MOCK, "footswitch_shadow.png")).convert("L")).astype(np.float32) / 255.0
+    fh = fs_up.shape[0] // 2
+    a_up = fs_up[..., 3] / 255.0
+    drop = np.roll(a_up, 7, axis=0)
+    drop = np.asarray(Image.fromarray((drop * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(7))).astype(np.float32) / 255.0
+    mul = (fs_shadow ** 1.6) * (1.0 - 0.45 * drop)
+    fx0, fy0 = int(FS_CENTER[0]) - fh, int(FS_CENTER[1]) - fh
+    img[fy0:fy0 + 2 * fh, fx0:fx0 + 2 * fh] *= mul[..., None]
+    fs_base = img.copy()
+    paste(img, fs_up[..., :3], FS_CENTER[0], FS_CENTER[1], fs_up[..., 3:4] / 255.0)
+    paste(img, led_off_patch, LED_DRIVE_NEW[0], LED_DRIVE_NEW[1], radial_alpha(LED_DRIVE_HALF, 13, 21))
 
     # 4) Textos impressos genéricos da primeira referência
     gp = np.asarray(Image.open(os.path.join(MOCK, "generic_print.png")).convert("RGBA")).astype(np.float32)
@@ -265,7 +314,16 @@ def main():
     # Rodapé inferior direito
     composite(img, text_layer("AURA BASS", russo(31), 1440, 888, "rs", 0.5), (128, 130, 135), 1.0)
     # Rótulo do botão DRIVE
-    composite(img, text_layer("DRIVE", roboto(19), 284, 452, "ls", 1.8), (170, 172, 177), 1.0)
+    composite(img, text_layer("DRIVE", roboto(19), 293, 459, "ls", 1.8), (170, 172, 177), 1.0)
+
+    # Sobreposições do DRIVE: LED aceso e footswitch pressionado
+    img_on = img.copy()
+    paste(img_on, led_on_patch, LED_DRIVE_NEW[0], LED_DRIVE_NEW[1], radial_alpha(LED_DRIVE_HALF, 13, 21))
+    led_drive_on = crop_rgba(img_on, LED_DRIVE_NEW[0], LED_DRIVE_NEW[1], LED_DRIVE_HALF)
+    img_down = fs_base.copy()
+    down_rgb = fs_down[..., :3] * 0.94      # um pouco mais escuro: afundado
+    paste(img_down, down_rgb, FS_CENTER[0], FS_CENTER[1], fs_down[..., 3:4] / 255.0)
+    footswitch_down = crop_rgba(img_down, FS_CENTER[0], FS_CENTER[1], FS_DOWN_HALF, np.ones((2 * FS_DOWN_HALF, 2 * FS_DOWN_HALF), np.float32))
 
     # 6) Chave do CAB desligada: alavanca espelhada (chave de dois lados)
     tx, ty = TOGGLE_CENTER
@@ -283,6 +341,7 @@ def main():
     led_drive_on.save(os.path.join(OUT, "led_drive_on.png"))
     led_cab_on.save(os.path.join(OUT, "led_cab_on.png"))
     cab_off.save(os.path.join(OUT, "cab_off.png"))
+    footswitch_down.save(os.path.join(OUT, "footswitch_down.png"))
 
     # Prévia com as sobreposições "ligadas" para conferência
     print("background", bg.size)

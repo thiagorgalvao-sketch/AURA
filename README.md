@@ -9,12 +9,12 @@ Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presen
 | **LEVEL** | Volume de saída, −15 a +15 dB |
 | **DRIVE** (knob) | Ganho antes da saturação, −15 a +15 dB. 0 dB é o ponto nominal (+20 dB no clipper), −15 dB só esquenta, +15 dB satura bastante |
 | **LOW / MID / HIGH** | Shelf 80 Hz / pico 600 Hz / shelf 2,5 kHz, −12 a +12 dB |
-| **PRESENCE** | Pico em 5 kHz, −7 a +7 dB |
+| **PRESENCE** | Pico em 5 kHz, −7 a +7 dB (padrão +3 dB) |
 | **BLEND** | Mistura do sinal limpo com o saturado, 0 a 100% |
-| **Botão DRIVE** (power, LED azul) | Liga/desliga só a distorção. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
+| **Footswitch DRIVE** (LED azul) | Liga/desliga só a distorção, como um pedal de pisar. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
 | **Chave CAB** (LED laranja) | Liga/desliga a simulação de caixa |
 
-O valor de cada knob aparece embaixo dele. Duplo clique volta o knob ao valor padrão.
+O valor de cada knob aparece embaixo dele. Duplo clique volta o knob ao valor padrão: Level, Drive, Low, Mid e High em 0.0 dB, Presence em 3.0 dB e Blend em 100%.
 Gera **VST3** e **Standalone** no Windows e no Mac, e **AU** no Mac. AAX: veja abaixo.
 
 ## Fluxo do sinal
@@ -77,7 +77,7 @@ Exige o AAX SDK (grátis em developer.avid.com) e, para rodar no Pro Tools comum
 
 ## Interface
 
-A interface usa a arte de referência do painel: placa de metal escuro escovado, moldura cromada, knobs serrilhados com arco, botão DRIVE com LED azul e chave alavanca do CAB com LED laranja. O script `Tools/build_ui_assets.py` monta as imagens em `Resources/ui/` a partir de `Resources/mockup/`, comparando o painel completo com a placa vazia (as duas imagens são alinhadas):
+A interface usa a arte de referência do painel: placa de metal escuro escovado, moldura cromada, knobs serrilhados com arco, footswitch do DRIVE com LED azul e chave alavanca do CAB com LED laranja. O footswitch é renderizado com iluminação física por `Tools/FootswitchRender` (porca sextavada, arruela e botão de cromo, com sombra na placa) e aplicado sobre a arte. O script `Tools/build_ui_assets.py` monta as imagens em `Resources/ui/` a partir de `Resources/mockup/`, comparando o painel completo com a placa vazia (as duas imagens são alinhadas):
 
 | Arquivo | Conteúdo |
 |---|---|
@@ -85,6 +85,7 @@ A interface usa a arte de referência do painel: placa de metal escuro escovado,
 | `pointer.png` | indicador do knob, que gira conforme o valor |
 | `led_drive_on.png`, `led_cab_on.png` | LEDs acesos |
 | `cab_off.png` | chave do CAB na outra posição (alavanca espelhada) |
+| `footswitch_down.png` | footswitch do DRIVE pressionado |
 
 Os valores embaixo dos knobs são desenhados ao vivo com a fonte Roboto. As posições ficam em `Source/Layout.h`. Para gerar as imagens de novo depois de mudar a arte ou os textos:
 

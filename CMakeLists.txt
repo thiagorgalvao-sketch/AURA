@@ -56,6 +56,7 @@ juce_add_binary_data(AuraAssets SOURCES
     Resources/ui/led_drive_on.png
     Resources/ui/led_cab_on.png
     Resources/ui/cab_off.png
+    Resources/ui/footswitch_down.png
     Resources/fonts/Roboto.ttf)
 
 target_sources(AuraBass PRIVATE
@@ -97,4 +98,16 @@ if(AURA_BUILD_TESTS)
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_recommended_config_flags)
+endif()
+
+# ---------------------------------------------------------------------------
+# Renderizador do footswitch (opcional): cmake -DAURA_BUILD_TOOLS=ON ...
+# A imagem gerada fica versionada em Resources/mockup, então não é preciso rodá-lo.
+# ---------------------------------------------------------------------------
+option(AURA_BUILD_TOOLS "Compila o renderizador do footswitch" OFF)
+if(AURA_BUILD_TOOLS)
+    juce_add_console_app(FootswitchRender PRODUCT_NAME "FootswitchRender")
+    target_sources(FootswitchRender PRIVATE Tools/FootswitchRender/Main.cpp)
+    target_compile_definitions(FootswitchRender PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+    target_link_libraries(FootswitchRender PRIVATE juce::juce_graphics juce::juce_recommended_config_flags)
 endif()

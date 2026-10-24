@@ -56,7 +56,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::crea
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::high, 1 }, "High",
                      eq (0), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::presence, 1 }, "Presence",
-                     NormalisableRange<float> (-7.0f, 7.0f, 0.1f), 0.0f, dbAttr));
+                     NormalisableRange<float> (-7.0f, 7.0f, 0.1f), 3.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::blend, 1 }, "Blend",
                      NormalisableRange<float> (0.0f, 100.0f, 1.0f), 100.0f, pctAttr));
     p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::cab, 1 }, "Cab", true));

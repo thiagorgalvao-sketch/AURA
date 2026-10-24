@@ -10,7 +10,7 @@ struct AuraAssets
 {
     AuraAssets();
 
-    juce::Image background, pointer, ledDriveOn, ledCabOn, cabOff;
+    juce::Image background, pointer, ledDriveOn, ledCabOn, cabOff, footswitchDown;
     juce::Typeface::Ptr valueTypeface;
 };
 
@@ -30,7 +30,7 @@ private:
 };
 
 //==============================================================================
-// Área clicável invisível (botão DRIVE e chave do CAB)
+// Área clicável invisível (footswitch do DRIVE e chave do CAB)
 class HotSpot : public juce::ToggleButton
 {
 public:

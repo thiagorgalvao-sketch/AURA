@@ -20,6 +20,7 @@ AuraAssets::AuraAssets()
     ledDriveOn = load (BinaryData::led_drive_on_png, BinaryData::led_drive_on_pngSize);
     ledCabOn   = load (BinaryData::led_cab_on_png, BinaryData::led_cab_on_pngSize);
     cabOff     = load (BinaryData::cab_off_png, BinaryData::cab_off_pngSize);
+    footswitchDown = load (BinaryData::footswitch_down_png, BinaryData::footswitch_down_pngSize);
     valueTypeface = Typeface::createSystemTypefaceFor (BinaryData::Roboto_ttf, (size_t) BinaryData::Roboto_ttfSize);
 }
 
@@ -66,6 +67,7 @@ AuraBassAudioProcessorEditor::AuraBassAudioProcessorEditor (AuraBassAudioProcess
     }
 
     addAndMakeVisible (driveSpot);
+    driveSpot.onStateChange = [this] { repaint(); };
     addAndMakeVisible (cabSpot);
     driveAttachment = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment> (processor.apvts, ParamIDs::driveOn, driveSpot);
     cabAttachment   = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment> (processor.apvts, ParamIDs::cab, cabSpot);
@@ -103,8 +105,10 @@ void AuraBassAudioProcessorEditor::paint (Graphics& g)
     g.setImageResamplingQuality (Graphics::highResamplingQuality);
     g.drawImage (assets->background, getLocalBounds().toFloat());
 
+    if (driveSpot.isDown())
+        g.drawImage (assets->footswitchDown, square (L::driveSwitchX, L::driveSwitchY, L::driveSwitchDownHalf));
     if (driveOn)
-        g.drawImage (assets->ledDriveOn, square (L::driveLedX, L::driveLedY, L::ledHalf));
+        g.drawImage (assets->ledDriveOn, square (L::driveLedX, L::driveLedY, L::driveLedHalf));
 
     if (cabOn)
         g.drawImage (assets->ledCabOn, square (L::cabLedX, L::cabLedY, L::ledHalf));

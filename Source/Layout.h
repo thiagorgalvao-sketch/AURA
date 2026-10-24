@@ -24,11 +24,12 @@ namespace AuraLayout
     inline constexpr float valueY = 252.0f;          // centro vertical dos valores
     inline constexpr float valueFontSize = 14.0f;
 
-    // Botão DRIVE (power + LED azul + rótulo)
-    inline constexpr float driveButtonX = 59.5f, driveButtonY = 91.5f, driveButtonRadius = 15.5f;
-    inline constexpr float driveLedX = 87.5f, driveLedY = 91.5f;
+    // Footswitch do DRIVE + LED azul + rótulo
+    inline constexpr float driveSwitchX = 58.0f, driveSwitchY = 95.0f;
+    inline constexpr float driveSwitchDownHalf = 24.0f;   // sobreposição "pressionado"
+    inline constexpr float driveLedX = 96.0f, driveLedY = 95.0f, driveLedHalf = 11.0f;
     struct Rect { float x, y, w, h; };
-    inline constexpr Rect driveHit { 43.0f, 74.0f, 92.0f, 35.0f };
+    inline constexpr Rect driveHit { 34.0f, 71.0f, 116.0f, 48.0f };
 
     // CAB (rótulo, LED laranja e chave alavanca)
     inline constexpr float cabLedX = 671.35f, cabLedY = 158.65f;
