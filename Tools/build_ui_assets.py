@@ -46,10 +46,10 @@ VALUE_RECTS = [(150, 745, 300, 790), (325, 745, 475, 790), (500, 745, 650, 790),
 LED_DRIVE = (249.0, 445.0, 9.5)           # x, y, raio da lente (posição original na arte)
 
 # Footswitch do DRIVE (renderizado por Tools/FootswitchRender) e nova posição do LED azul
-FS_CENTER = (190.0, 452.0)
+FS_CENTER = (1385.0, 858.0)              # canto inferior direito
 FS_WIPE = (145, 398, 352, 494)            # região do antigo botão power + LED + rótulo
 FS_DOWN_HALF = 48
-LED_DRIVE_NEW = (266.0, 452.0)
+LED_DRIVE_NEW = (1306.0, 858.0)
 LED_DRIVE_HALF = 22
 LED_CAB = (1416.7, 579.3, 9.0)
 LED_HALF = 32                             # meio lado do recorte do LED (px)
@@ -289,6 +289,9 @@ def main():
     gx, gy = 1200, 340
     gh, gw = gp.shape[:2]
     ga = gp[..., 3:4] / 255.0
+    # Mantém só o texto vertical e o traço lateral; tira subtítulos/microtextos ligados à marca
+    for x0r, y0r, x1r, y1r in [(1303, 893, 1444, 912), (1226, 890, 1300, 912), (1234, 360, 1306, 382)]:
+        ga[y0r - gy:y1r - gy, x0r - gx:x1r - gx] = 0.0
     img[gy:gy + gh, gx:gx + gw] = img[gy:gy + gh, gx:gx + gw] * (1 - ga) + gp[..., :3] * ga
 
     # 5) Marca AURA BASS no estilo da referência
@@ -308,13 +311,8 @@ def main():
 
     # Logotipo grande (com desgaste)
     composite(img, text_layer("AURA BASS", russo(77), 163, 380, spacing=1.5), (218, 219, 223), 0.97, True, 11)
-    # Selo superior direito
-    composite(img, text_layer("AURA BASS", russo(33), 1438, 357, "rs", 0.5), (142, 144, 149), 1.0)
-    composite(img, text_layer("BASS PREAMP", roboto(18), 1437, 379, "rs", 0.6), (128, 130, 135), 1.0)
-    # Rodapé inferior direito
-    composite(img, text_layer("AURA BASS", russo(31), 1440, 888, "rs", 0.5), (128, 130, 135), 1.0)
-    # Rótulo do botão DRIVE
-    composite(img, text_layer("DRIVE", roboto(19), 293, 459, "ls", 1.8), (170, 172, 177), 1.0)
+    # Rótulo do footswitch DRIVE (à esquerda do LED)
+    composite(img, text_layer("DRIVE", roboto(19), 1274, 865, "rs", 1.8), (170, 172, 177), 1.0)
 
     # Sobreposições do DRIVE: LED aceso e footswitch pressionado
     img_on = img.copy()

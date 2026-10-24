@@ -1,6 +1,6 @@
 # AURA Bass — overdrive de baixo (JUCE)
 
-Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presence, Level, simulação de caixa e footswitches para ligar e desligar o DRIVE e o CAB.
+Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presence, Level, simulação de caixa (chave CAB) e footswitch para ligar e desligar o DRIVE.
 
 ## Controles
 
@@ -81,7 +81,7 @@ A interface usa a arte de referência do painel: placa de metal escuro escovado,
 
 | Arquivo | Conteúdo |
 |---|---|
-| `background.jpg` | painel em 2x, sem os indicadores dos knobs e sem os valores, LEDs apagados, com o nome AURA BASS (Russo One, com desgaste) |
+| `background.jpg` | painel em 2x, sem os indicadores dos knobs e sem os valores, LEDs apagados, com o logotipo AURA BASS (Russo One, com desgaste) e o footswitch do DRIVE no canto inferior direito |
 | `pointer.png` | indicador do knob, que gira conforme o valor |
 | `led_drive_on.png`, `led_cab_on.png` | LEDs acesos |
 | `cab_off.png` | chave do CAB na outra posição (alavanca espelhada) |
