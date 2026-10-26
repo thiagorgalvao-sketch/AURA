@@ -186,6 +186,73 @@ int main()
         check (maxStepAround <= maxStep * 1.05, "sem descontinuidade na troca");
     }
 
+    std::printf ("Compensação de volume: DRIVE ligado x desligado (senoide 100 Hz, -12 dBFS)\n");
+    for (float drive : { -15.0f, 0.0f, 15.0f })
+    {
+        AuraBassAudioProcessor on, off;
+        for (auto* p : { &on, &off })
+        {
+            setParam (*p, ParamIDs::cab, 0.0f);
+            setParam (*p, ParamIDs::presence, 0.0f);
+            setParam (*p, ParamIDs::blend, 100.0f);
+            setParam (*p, ParamIDs::drive, drive);
+        }
+        setParam (off, ParamIDs::driveOn, 0.0f);
+        const double a = rms (run (on, 100.0f, 0.25f), from), b = rms (run (off, 100.0f, 0.25f), from);
+        const double diff = juce::Decibels::gainToDecibels (a / b);
+        std::printf ("  drive %+5.1f dB: diferença %+.1f dB\n", drive, diff);
+        check (std::abs (diff) < 1.5, "volume parecido ligado/desligado");
+    }
+
+    std::printf ("CAB por resposta de impulso\n");
+    {
+        AuraBassAudioProcessor a, b;
+        for (auto* p : { &a, &b }) { setParam (*p, ParamIDs::presence, 0.0f); setParam (*p, ParamIDs::driveOn, 0.0f); }
+        b.setCabIR ("builtin:1");
+        const double low4 = rms (run (a, 100.0f, 0.1f), from), hi4 = rms (run (a, 5000.0f, 0.1f), from);
+        const double low15 = rms (run (b, 100.0f, 0.1f), from), hi15 = rms (run (b, 5000.0f, 0.1f), from);
+        std::printf ("  4x10: 5 kHz %.1f dB abaixo de 100 Hz | 1x15: %.1f dB abaixo\n",
+                     juce::Decibels::gainToDecibels (low4 / hi4), juce::Decibels::gainToDecibels (low15 / hi15));
+        check (hi15 < hi4, "1x15 mais escura que 4x10");
+        {
+            AuraBassAudioProcessor c;
+            setParam (c, ParamIDs::presence, 0.0f); setParam (c, ParamIDs::driveOn, 0.0f); setParam (c, ParamIDs::cab, 0.0f);
+            for (float f : { 80.0f, 300.0f, 1000.0f })
+            {
+                AuraBassAudioProcessor on; setParam (on, ParamIDs::presence, 0.0f); setParam (on, ParamIDs::driveOn, 0.0f);
+                AuraBassAudioProcessor off; setParam (off, ParamIDs::presence, 0.0f); setParam (off, ParamIDs::driveOn, 0.0f); setParam (off, ParamIDs::cab, 0.0f);
+                std::printf ("  CAB 4x10 ligado vs desligado em %4.0f Hz: %+.1f dB\n", f,
+                             juce::Decibels::gainToDecibels (rms (run (on, f, 0.1f), from) / rms (run (off, f, 0.1f), from)));
+            }
+        }
+        check (b.getCabIRDisplayName() == "1x15", "nome da IR");
+        b.setCabIR ("file:/nao/existe.wav");
+        check (finite (run (b, 100.0f, 0.1f)), "arquivo inexistente volta para a IR embutida");
+    }
+
+    std::printf ("Presets de fábrica\n");
+    {
+        AuraBassAudioProcessor p;
+        check (p.getNumPrograms() == 5, "5 presets");
+        p.setCurrentProgram (3);
+        const float d = p.apvts.getRawParameterValue (ParamIDs::drive)->load();
+        std::printf ("  '%s' -> drive %.1f dB\n", p.getProgramName (3).toRawUTF8(), d);
+        check (std::abs (d - 10.0f) < 0.05f, "preset aplica os valores");
+        p.setCurrentProgram (1);
+        check (p.apvts.getRawParameterValue (ParamIDs::driveOn)->load() < 0.5f, "Clean DI desliga o DRIVE");
+    }
+
+    std::printf ("Estado (IR e escala) salvo e restaurado\n");
+    {
+        AuraBassAudioProcessor a, b;
+        a.setCabIR ("builtin:1");
+        a.setUiScale (1.25f);
+        juce::MemoryBlock mb;
+        a.getStateInformation (mb);
+        b.setStateInformation (mb.getData(), (int) mb.getSize());
+        check (b.getCabIR() == "builtin:1" && std::abs (b.getUiScale() - 1.25f) < 0.001f, "IR e escala restauradas");
+    }
+
     std::printf ("Mono\n");
     {
         AuraBassAudioProcessor p;
@@ -211,7 +278,10 @@ int main()
             setParam (p, ParamIDs::drive, 9.5f);
             setParam (p, ParamIDs::low, -12.0f);
         }
+        if (auto* sc = std::getenv ("AURA_SNAPSHOT_SCALE"))
+            p.setUiScale (juce::String (sc).getFloatValue());
         std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());
+        std::printf ("Editor %dx%d\n", ed->getWidth(), ed->getHeight());
         auto img = ed->createComponentSnapshot (ed->getLocalBounds(), true, 2.0f);
         juce::File file (outPath);
         file.deleteFile();

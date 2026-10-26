@@ -57,7 +57,9 @@ juce_add_binary_data(AuraAssets SOURCES
     Resources/ui/led_cab_on.png
     Resources/ui/cab_off.png
     Resources/ui/footswitch_down.png
-    Resources/fonts/Roboto.ttf)
+    Resources/fonts/Roboto.ttf
+    Resources/ir/cab_4x10.wav
+    Resources/ir/cab_1x15.wav)
 
 target_sources(AuraBass PRIVATE
     Source/PluginProcessor.cpp

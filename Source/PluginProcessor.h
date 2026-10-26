@@ -58,10 +58,11 @@ public:
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 0.0; }
 
-    int getNumPrograms() override { return 1; }
-    int getCurrentProgram() override { return 0; }
-    void setCurrentProgram (int) override {}
-    const juce::String getProgramName (int) override { return {}; }
+    // Presets de fábrica (aparecem no menu de presets da DAW)
+    int getNumPrograms() override;
+    int getCurrentProgram() override { return currentProgram; }
+    void setCurrentProgram (int index) override;
+    const juce::String getProgramName (int index) override;
     void changeProgramName (int, const juce::String&) override {}
 
     void getStateInformation (juce::MemoryBlock& destData) override;
@@ -74,6 +75,19 @@ public:
     // A curva de saturação fica pública/estática para poder ser testada isoladamente.
     static float shape (float x) noexcept;
 
+    // Ganho que deixa o som saturado no mesmo volume do limpo (sinal de referência de -12 dBFS)
+    static float levelCompensation (float driveDb) noexcept;
+
+    // Resposta de impulso do CAB: "builtin:0" (4x10), "builtin:1" (1x15) ou "file:<caminho>"
+    void setCabIR (const juce::String& source);
+    juce::String getCabIR() const;
+    juce::String getCabIRDisplayName() const;
+    static juce::StringArray builtinCabNames() { return { "4x10", "1x15" }; }
+
+    // Escala da interface (100/125/150%), salva junto com a sessão
+    float getUiScale() const;
+    void setUiScale (float scale);
+
 private:
     using Filter = juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>,
                                                   juce::dsp::IIR::Coefficients<float>>;
@@ -82,12 +96,16 @@ private:
     void setupFixedFilters();
     void updateToneFilters (bool force);
     float effectiveBlend() const noexcept;
+    void applyCabIR();
+
+    int currentProgram = 0;
+    float lastCompDrive = -1000.0f;
 
     double currentSampleRate = 44100.0;
 
     // Filtros fixos
     Filter inputHpf, preEmphasis, postDcBlock, postLpf;
-    Filter cabHpf, cabLowBump, cabMidScoop, cabLpf1, cabLpf2;
+    juce::dsp::Convolution cabConvolution;
 
     // Tone stack
     Filter lowShelf, midPeak, highShelf, presencePeak;
@@ -98,7 +116,7 @@ private:
 
     juce::AudioBuffer<float> dryBuffer, preCabBuffer;
 
-    juce::SmoothedValue<float> driveGain, blendMix, cabMix, outputGain;
+    juce::SmoothedValue<float> driveGain, blendMix, cabMix, outputGain, autoGain;
 
     std::atomic<float>* pLevel    = nullptr;
     std::atomic<float>* pDrive    = nullptr;

@@ -14,7 +14,27 @@ Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presen
 | **Footswitch DRIVE** (LED azul) | Liga/desliga só a distorção, como um pedal de pisar. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
 | **Chave CAB** (LED laranja) | Liga/desliga a simulação de caixa |
 
-O valor de cada knob aparece embaixo dele. Duplo clique volta o knob ao valor padrão: Level, Drive, Low, Mid e High em 0.0 dB, Presence em 3.0 dB e Blend em 100%.
+O valor de cada knob aparece embaixo dele. Duplo clique volta o knob ao valor padrão: Level, Drive, Low, Mid e High em 0.0 dB, Presence em 3.0 dB e Blend em 100%. Segure **Shift** ao arrastar (ou ao girar a roda do mouse) para ajuste fino.
+
+### Compensação de volume do DRIVE
+
+O som saturado é compensado automaticamente para ficar no mesmo volume do limpo (calibrado com um sinal de −12 dBFS, nível típico de baixo na entrada). Ligar o footswitch muda o timbre, não o volume. O Level continua ajustando a saída final.
+
+### CAB por resposta de impulso (IR)
+
+O CAB usa convolução. Clique no nome embaixo da chave do CAB (ex.: "4x10 ▾") para escolher:
+- **4x10** e **1x15**: IRs embutidas, geradas por `Tools/make_cab_irs.py` a partir de um modelo de caixa de baixo;
+- **Carregar IR (.wav / .aiff)...**: qualquer IR de caixa (usa o primeiro canal, até 1 s).
+
+Toda IR é ajustada para 0 dB na faixa de 100 a 800 Hz, então ligar o CAB muda o timbre sem derrubar o volume. A escolha fica salva na sessão.
+
+### Presets de fábrica
+
+No menu de presets da DAW: **AURA (padrão)**, **Clean DI**, **Grit leve**, **Drive pesado** e **Slap brilhante**.
+
+### Tamanho da interface
+
+Clique em "UI 100%" no canto inferior esquerdo (ou clique com o botão direito no painel) para escolher 100%, 125% ou 150%. O tamanho fica salvo na sessão.
 Gera **VST3** e **Standalone** no Windows e no Mac, e **AU** no Mac. AAX: veja abaixo.
 
 ## Fluxo do sinal
