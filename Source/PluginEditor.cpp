@@ -27,6 +27,7 @@ AuraAssets::AuraAssets()
     ledCabOn   = load (BinaryData::led_cab_on_png, BinaryData::led_cab_on_pngSize);
     cabOff     = load (BinaryData::cab_off_png, BinaryData::cab_off_pngSize);
     footswitchDown = load (BinaryData::footswitch_down_png, BinaryData::footswitch_down_pngSize);
+    arcsLit    = load (BinaryData::arcs_lit_png, BinaryData::arcs_lit_pngSize);
     valueTypeface = Typeface::createSystemTypefaceFor (BinaryData::Roboto_ttf, (size_t) BinaryData::Roboto_ttfSize);
 }
 
@@ -125,13 +126,29 @@ void AuraPanel::timerCallback()
     }
 }
 
-Rectangle<float> AuraPanel::cabIrArea() const   { return Rectangle<float> (64.0f, 18.0f).withCentre ({ L::cabToggleX, 241.0f }); }
-Rectangle<float> AuraPanel::scaleArea() const   { return Rectangle<float> (40.0f, 306.0f, 62.0f, 16.0f); }
+Rectangle<float> AuraPanel::cabIrArea() const   { return Rectangle<float> (64.0f, 20.0f).withCentre ({ L::cabToggleX, L::valueY }); }
 
 void AuraPanel::paint (Graphics& g)
 {
     g.setImageResamplingQuality (Graphics::highResamplingQuality);
     g.drawImage (assets->background, getLocalBounds().toFloat());
+
+    // Arcos acesos até o valor: knobs em dB acendem a partir do centro (0 dB), o Blend a partir do início
+    for (size_t i = 0; i < knobs.size(); ++i)
+    {
+        const auto& k = L::knobs[i];
+        const float norm = (float) knobs[i]->valueToProportionOfLength (knobs[i]->getValue());
+        const float end = degreesToRadians (-L::arcMaxDeg + norm * 2.0f * L::arcMaxDeg);
+        const bool bipolar = String (k.paramId) != ParamIDs::blend;
+        const float start = bipolar ? 0.0f : degreesToRadians (-L::arcMaxDeg);
+        if (std::abs (end - start) < 0.01f) continue;
+        Path pie;
+        const float r = L::arcLitRadius;
+        pie.addPieSegment (k.cx - r, k.cy + L::arcCentreDy - r, 2 * r, 2 * r, jmin (start, end), jmax (start, end), 0.0f);
+        Graphics::ScopedSaveState ss (g);
+        g.reduceClipRegion (pie);
+        g.drawImage (assets->arcsLit, getLocalBounds().toFloat());
+    }
 
     if (driveSpot.isDown())
         g.drawImage (assets->footswitchDown, square (L::driveSwitchX, L::driveSwitchY, L::driveSwitchDownHalf));
@@ -156,35 +173,34 @@ void AuraPanel::paintOverChildren (Graphics& g)
                     Rectangle<float> (110.0f, 20.0f).withCentre ({ k.valueX, L::valueY }), Justification::centred, false);
     }
 
-    // Seletor da IR do CAB (embaixo da chave)
+    // Seletor da IR do CAB: na mesma linha e no mesmo tamanho dos valores, com a seta colada
     {
-        auto r = cabIrArea();
-        g.setFont (Font (FontOptions (assets->valueTypeface).withHeight (11.5f)));
+        const auto font = Font (FontOptions (assets->valueTypeface).withHeight (L::valueFontSize));
+        const auto name = cabIrName.length() > 7 ? cabIrName.substring (0, 6) + "…" : cabIrName;
+        const float tw = GlyphArrangement::getStringWidth (font, name);
+        const float total = tw + 4.0f + 7.0f;
+        const auto c = cabIrArea().getCentre();
+        const float x0 = c.x - total * 0.5f;
+        g.setFont (font);
         g.setColour (cabOn ? valueColour : smallLabelColour);
-        auto name = cabIrName.length() > 9 ? cabIrName.substring (0, 8) + "…" : cabIrName;
-        g.drawText (name, r.withTrimmedRight (10.0f), Justification::centred, false);
+        g.drawText (name, Rectangle<float> (x0, c.y - 10.0f, tw + 1.0f, 20.0f), Justification::centredLeft, false);
         Path tri;
-        const float tx = r.getRight() - 7.0f, ty = r.getCentreY();
-        tri.addTriangle (tx - 3.0f, ty - 1.5f, tx + 3.0f, ty - 1.5f, tx, ty + 2.0f);
+        const float tx = x0 + tw + 4.0f + 3.5f, ty = c.y + 0.5f;
+        tri.addTriangle (tx - 3.5f, ty - 2.0f, tx + 3.5f, ty - 2.0f, tx, ty + 2.5f);
         g.fillPath (tri);
     }
-
-    // Seletor de tamanho da interface (canto inferior esquerdo)
-    g.setFont (Font (FontOptions (assets->valueTypeface).withHeight (10.5f)));
-    g.setColour (smallLabelColour);
-    g.drawText ("UI " + String (roundToInt (currentScale * 100.0f)) + "%", scaleArea(), Justification::centredLeft, false);
 }
 
 void AuraPanel::mouseMove (const MouseEvent& e)
 {
     const auto p = e.position;
-    setMouseCursor (cabIrArea().contains (p) || scaleArea().contains (p) ? MouseCursor::PointingHandCursor : MouseCursor::NormalCursor);
+    setMouseCursor (cabIrArea().contains (p) ? MouseCursor::PointingHandCursor : MouseCursor::NormalCursor);
 }
 
 void AuraPanel::mouseDown (const MouseEvent& e)
 {
     if (cabIrArea().contains (e.position)) { showCabMenu(); return; }
-    if (scaleArea().contains (e.position) || e.mods.isPopupMenu()) { showScaleMenu(); return; }
+    if (e.mods.isPopupMenu()) { showScaleMenu(); return; }   // clique direito: tamanho da interface
 }
 
 void AuraPanel::showCabMenu()
@@ -228,7 +244,7 @@ void AuraPanel::showScaleMenu()
     const float scales[] = { 1.0f, 1.25f, 1.5f };
     for (int i = 0; i < 3; ++i)
         m.addItem (1 + i, String (roundToInt (scales[i] * 100.0f)) + "%", true, std::abs (scales[i] - currentScale) < 0.01f);
-    m.showMenuAsync (PopupMenu::Options().withTargetScreenArea (localAreaToGlobal (scaleArea().getSmallestIntegerContainer())),
+    m.showMenuAsync (PopupMenu::Options(),
                      [this, scales] (int r)
     {
         if (r >= 1 && r <= 3 && onScaleChosen)

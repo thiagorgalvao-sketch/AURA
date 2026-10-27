@@ -11,10 +11,10 @@ Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presen
 | **LOW / MID / HIGH** | Shelf 80 Hz / pico 600 Hz / shelf 2,5 kHz, −12 a +12 dB |
 | **PRESENCE** | Pico em 5 kHz, −7 a +7 dB (padrão +3 dB) |
 | **BLEND** | Mistura do sinal limpo com o saturado, 0 a 100% |
-| **Footswitch DRIVE** (LED azul) | Liga/desliga só a distorção, como um pedal de pisar. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
+| **Footswitch ENGAGE** (LED azul) | Liga/desliga só a distorção, como um pedal de pisar. Desligado, o som passa limpo pelo EQ, Cab e Level. Troca sem estalo e pode ser automatizado ou mapeado para um pedal MIDI na DAW |
 | **Chave CAB** (LED laranja) | Liga/desliga a simulação de caixa |
 
-O valor de cada knob aparece embaixo dele. Duplo clique volta o knob ao valor padrão: Level, Drive, Low, Mid e High em 0.0 dB, Presence em 3.0 dB e Blend em 100%. Segure **Shift** ao arrastar (ou ao girar a roda do mouse) para ajuste fino.
+O valor de cada knob aparece embaixo dele, e o arco metálico em volta acende até o valor (a partir do centro nos controles em dB, a partir do início no Blend). Duplo clique volta o knob ao valor padrão: Level, Drive, Low, Mid e High em 0.0 dB, Presence em 3.0 dB e Blend em 100%. Segure **Shift** ao arrastar (ou ao girar a roda do mouse) para ajuste fino.
 
 ### Compensação de volume do DRIVE
 
@@ -34,7 +34,7 @@ No menu de presets da DAW: **AURA (padrão)**, **Clean DI**, **Grit leve**, **Dr
 
 ### Tamanho da interface
 
-Clique em "UI 100%" no canto inferior esquerdo (ou clique com o botão direito no painel) para escolher 100%, 125% ou 150%. O tamanho fica salvo na sessão.
+Clique com o botão direito em qualquer parte vazia do painel para escolher 100%, 125% ou 150%. O tamanho fica salvo na sessão.
 Gera **VST3** e **Standalone** no Windows e no Mac, e **AU** no Mac. AAX: veja abaixo.
 
 ## Fluxo do sinal

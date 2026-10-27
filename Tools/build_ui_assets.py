@@ -14,6 +14,7 @@ Saídas (Resources/ui), todas em 2x:
   pointer.png         indicador do knob (gira na interface), centrado no quadro
   led_drive_on.png    LED azul aceso (sobreposição)
   footswitch_down.png footswitch do DRIVE pressionado (sobreposição)
+  arcs_lit.png        arcos dos knobs "acesos" (a interface revela até o valor)
   led_cab_on.png      LED laranja aceso (sobreposição)
   cab_off.png         chave do CAB desligada (alavanca espelhada, sobreposição)
 
@@ -59,6 +60,22 @@ TOGGLE_CENTER = (1417.0, 652.0)
 TOGGLE_HALF = 50
 
 POINTER_HALF = 48                         # meio lado do quadro do indicador (px)
+
+# Bloco dos knobs/CAB sobe 40 px (20 unidades) para equilibrar o painel. As coordenadas acima
+# são as da arte original; aqui são convertidas para a posição nova.
+DY = -40
+BLOCK_ROWS = (500, 820)                   # linhas (arte original) do bloco que sobe
+BLOCK_COLS = (90, 1465)
+DRIVE_KNOB, MID_KNOB = 1, 3
+ARC_DY, ARC_R0, ARC_R1, ARC_MAX_DEG = 3.0, 62.0, 84.0, 146.0   # arco metálico em volta de cada knob
+KNOBS_ORIG = list(KNOBS)
+KNOBS = [(x, y + DY, a) for x, y, a in KNOBS]
+VALUE_RECTS = [(x0, y0 + DY, x1, y1 + DY) for x0, y0, x1, y1 in VALUE_RECTS]
+LED_CAB = (LED_CAB[0], LED_CAB[1] + DY, LED_CAB[2])
+TOGGLE_CENTER = (TOGGLE_CENTER[0], TOGGLE_CENTER[1] + DY)
+
+# Microtextos ilegíveis da arte (substituídos por textos reais)
+MICRO_WIPES = [(1022, 266, 1182, 324), (932, 876, 1132, 924)]
 
 
 def load(name):
@@ -211,10 +228,96 @@ def composite(img, rgba_canvas, colour, alpha_scale=1.0, use_distress=False, see
     img[:] = img * (1 - a) + np.array(colour, np.float32) * a
 
 
+def prepare_layout(layout, plate):
+    """Ajustes na arte antes de tudo: tira o botão power antigo, deixa o arco do DRIVE igual
+    aos outros e sobe o bloco dos knobs. Trabalha na diferença (arte - placa vazia) para mover
+    só os elementos, mantendo a textura da placa no lugar."""
+    out = layout.copy()
+    x0, y0, x1, y1 = FS_WIPE
+    ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    edge = np.minimum.reduce([xs - x0, x1 - 1 - xs, ys - y0, y1 - 1 - ys])
+    wa = smoothstep(0, 10, edge)[..., None]
+    out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * (1 - wa) + plate[y0:y1, x0:x1] * wa
+
+    diff = out - plate
+
+    # Arco do DRIVE: copia o do MID (o original tinha um brilho fixo no fim)
+    dx_, dy_, _ = KNOBS_ORIG[DRIVE_KNOB]
+    mx_, my_, _ = KNOBS_ORIG[MID_KNOB]
+    R = 96
+    ys, xs = np.mgrid[-R:R + 1, -R:R + 1].astype(np.float32)
+    r = np.sqrt(xs ** 2 + ys ** 2)
+    ring = (smoothstep(ARC_R0 - 2, ARC_R0 + 2, r) * smoothstep(94.0, 88.0, r) * (ys < 60))[..., None]
+    sx, sy = int(round(mx_)), int(round(my_ + ARC_DY))
+    tx, ty = int(round(dx_)), int(round(dy_ + ARC_DY))
+    src = diff[sy - R:sy + R + 1, sx - R:sx + R + 1]
+    dst = diff[ty - R:ty + R + 1, tx - R:tx + R + 1]
+    diff[ty - R:ty + R + 1, tx - R:tx + R + 1] = dst * (1 - ring) + src * ring
+
+    # Sobe o bloco dos knobs
+    r0, r1 = BLOCK_ROWS
+    c0, c1 = BLOCK_COLS
+    block = diff[r0:r1, c0:c1].copy()
+    diff[r0:r1, c0:c1] = 0.0
+    diff[r0 + DY:r1 + DY, c0:c1] = block
+    return np.clip(plate + diff, 0, 255)
+
+
+def draw_microprint(img, plate, roboto):
+    """Troca os microtextos embaralhados por textos legíveis (sem repetir o nome)."""
+    for x0, y0, x1, y1 in MICRO_WIPES:
+        ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+        edge = np.minimum.reduce([xs - x0, x1 - 1 - xs, ys - y0, y1 - 1 - ys])
+        wa = smoothstep(0, 6, edge)[..., None]
+        img[y0:y1, x0:x1] = img[y0:y1, x0:x1] * (1 - wa) + plate[y0:y1, x0:x1] * wa
+
+    H, W = img.shape[:2]
+    layer = Image.new("L", (W, H), 0)
+    d = ImageDraw.Draw(layer)
+
+    def ruler(x0, x1, y, up):
+        d.line([(x0, y), (x1, y)], fill=255, width=1)
+        for i, x in enumerate(range(x0, x1 + 1, 6)):
+            ln = 9 if i % 10 == 0 else (6 if i % 5 == 0 else 3)
+            d.line([(x, y), (x, y - ln if up else y + ln)], fill=255, width=1)
+
+    ruler(1040, 1160, 286, False)
+    d.text((1040, 314), "MODEL AB-1   SER. 0417", font=roboto(12), fill=255, anchor="ls")
+    ruler(960, 1110, 920, True)
+    d.text((960, 902), "HANDMADE IN BRAZIL", font=roboto(12), fill=255, anchor="ls")
+    a = (np.asarray(layer).astype(np.float32) / 255.0 * 0.85)[..., None]
+    img[:] = img * (1 - a) + np.array((112, 114, 119), np.float32) * a
+
+
+def build_arcs_lit(img, plate):
+    """Camada com os arcos metálicos 'acesos' (mais claros); a interface revela só o trecho
+    do arco até o valor de cada knob."""
+    H, W = img.shape[:2]
+    out = np.zeros((H, W, 4), np.float32)
+    lum_d = lum(img) - lum(plate)
+    for cx, cy, _ in KNOBS:
+        R = int(ARC_R1) + 2
+        acx, acy = int(round(cx)), int(round(cy + ARC_DY))
+        ys, xs = np.mgrid[acy - R:acy + R + 1, acx - R:acx + R + 1].astype(np.float32)
+        vx, vy = xs - cx, ys - (cy + ARC_DY)
+        r = np.sqrt(vx ** 2 + vy ** 2)
+        ang = np.degrees(np.arctan2(vx, -vy))
+        band = smoothstep(ARC_R0, ARC_R0 + 2, r) * smoothstep(ARC_R1, ARC_R1 - 2, r) * (np.abs(ang) <= ARC_MAX_DEG)
+        m = smoothstep(6.0, 22.0, lum_d[acy - R:acy + R + 1, acx - R:acx + R + 1]) * band
+        base = img[acy - R:acy + R + 1, acx - R:acx + R + 1]
+        lit = np.clip(base * 1.35 + 8.0, 0, 255)
+        sl = out[acy - R:acy + R + 1, acx - R:acx + R + 1]
+        sl[..., :3] = np.where(m[..., None] > sl[..., 3:4], lit, sl[..., :3])
+        sl[..., 3] = np.maximum(sl[..., 3], m)
+    rgba = np.dstack([np.clip(out[..., :3], 0, 255), out[..., 3] * 255]).astype(np.uint8)
+    return Image.fromarray(rgba, "RGBA")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    layout = load("layout.jpg")
+    layout_orig = load("layout.jpg")
     plate = load("plate_empty.jpg")
+    layout = prepare_layout(layout_orig, plate)
     img = layout.copy()
     H, W = img.shape[:2]
 
@@ -257,17 +360,10 @@ def main():
         return src[y0:y0 + 2 * half, x0:x0 + 2 * half].copy()
 
     # LED azul: aceso (da arte) e apagado (sintetizado), movidos para a nova posição
-    led_on_patch = crop(layout, LED_DRIVE[0], LED_DRIVE[1], LED_DRIVE_HALF)
-    tmp = layout.copy()
+    led_on_patch = crop(layout_orig, LED_DRIVE[0], LED_DRIVE[1], LED_DRIVE_HALF)
+    tmp = layout_orig.copy()
     led_off(tmp, plate, *LED_DRIVE, tint=(40, 90, 200))
     led_off_patch = crop(tmp, LED_DRIVE[0], LED_DRIVE[1], LED_DRIVE_HALF)
-
-    # Apaga o botão antigo (volta à placa vazia, com borda suave)
-    x0, y0, x1, y1 = FS_WIPE
-    ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
-    edge = np.minimum.reduce([xs - x0, x1 - 1 - xs, ys - y0, y1 - 1 - ys])
-    wa = smoothstep(0, 10, edge)[..., None]
-    img[y0:y1, x0:x1] = img[y0:y1, x0:x1] * (1 - wa) + plate[y0:y1, x0:x1] * wa
 
     # Sombra do footswitch na placa
     fs_up = np.asarray(Image.open(os.path.join(MOCK, "footswitch_up.png")).convert("RGBA")).astype(np.float32)
@@ -297,6 +393,7 @@ def main():
     # 5) Marca AURA BASS no estilo da referência
     russo = lambda s: ImageFont.truetype(os.path.join(FONTS, "RussoOne-Regular.ttf"), s)
     roboto = lambda s, wght=500: ImageFont.truetype(os.path.join(FONTS, "Roboto.ttf"), s)
+    draw_microprint(img, plate, roboto)
 
     def text_layer(text, font, x, baseline, anchor="ls", spacing=0.0):
         layer = Image.new("L", (W, H), 0)
@@ -311,8 +408,8 @@ def main():
 
     # Logotipo grande (com desgaste)
     composite(img, text_layer("AURA BASS", russo(77), 163, 380, spacing=1.5), (218, 219, 223), 0.97, True, 11)
-    # Rótulo do footswitch DRIVE (à esquerda do LED)
-    composite(img, text_layer("DRIVE", roboto(19), 1274, 865, "rs", 1.8), (170, 172, 177), 1.0)
+    # Rótulo do footswitch (à esquerda do LED)
+    composite(img, text_layer("ENGAGE", roboto(19), 1274, 865, "rs", 1.8), (170, 172, 177), 1.0)
 
     # Sobreposições do DRIVE: LED aceso e footswitch pressionado
     img_on = img.copy()
@@ -340,6 +437,7 @@ def main():
     led_cab_on.save(os.path.join(OUT, "led_cab_on.png"))
     cab_off.save(os.path.join(OUT, "cab_off.png"))
     footswitch_down.save(os.path.join(OUT, "footswitch_down.png"))
+    build_arcs_lit(img, plate).crop((CROP_X, CROP_Y, CROP_X + CROP_W, CROP_Y + CROP_H)).save(os.path.join(OUT, "arcs_lit.png"))
 
     # Prévia com as sobreposições "ligadas" para conferência
     print("background", bg.size)

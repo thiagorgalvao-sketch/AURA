@@ -10,7 +10,7 @@ struct AuraAssets
 {
     AuraAssets();
 
-    juce::Image background, pointer, ledDriveOn, ledCabOn, cabOff, footswitchDown;
+    juce::Image background, pointer, ledDriveOn, ledCabOn, cabOff, footswitchDown, arcsLit;
     juce::Typeface::Ptr valueTypeface;
 };
 
@@ -65,7 +65,6 @@ private:
     void showCabMenu();
     void showScaleMenu();
     juce::Rectangle<float> cabIrArea() const;
-    juce::Rectangle<float> scaleArea() const;
 
     AuraBassAudioProcessor& processor;
     juce::SharedResourcePointer<AuraAssets> assets;
