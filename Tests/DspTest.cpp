@@ -42,7 +42,7 @@ namespace
     double maxJump (const std::vector<float>& v, size_t a, size_t b)
     {
         double m = 0;
-        for (size_t i = juce::jmax<size_t> (a, 1); i < juce::jmin (b, v.size()); ++i)
+        for (size_t i = std::max (a, (size_t) 1); i < std::min (b, v.size()); ++i)
             m = std::max (m, (double) std::abs (v[i] - v[i - 1]));
         return m;
     }
