@@ -7,6 +7,7 @@ on:
       - 'web/**'
       - 'Resources/ui/**'
       - 'Resources/ir/**'
+      - 'Resources/fonts/**'
       - 'Source/Layout.h'
       - 'Tools/build-web.sh'
       - 'Tests/web-dsp-test.js'
@@ -14,16 +15,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  publicar:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,21 +37,17 @@ jobs:
       - name: Montar o site
         run: bash Tools/build-web.sh site
 
-      # Exige que o Pages esteja ligado em Settings > Pages com a origem
-      # "GitHub Actions" (o token do Actions não tem permissão para ligar).
-      - name: Conferir o GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # O site vai para o branch gh-pages. O token do Actions pode escrever no
+      # repositório, mas não tem permissão para ligar o Pages: isso é feito uma
+      # única vez em Settings > Pages (origem: branch gh-pages, pasta /).
+      - name: Publicar no branch gh-pages
+        run: |
+          cd site
+          git init -q -b gh-pages
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Site da versão navegador — ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

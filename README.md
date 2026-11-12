@@ -119,12 +119,14 @@ python3 Tests/web-ui-test.py      # abre num Chromium e testa a interface
 ```
 
 O workflow `.github/workflows/pages.yml` faz isso a cada push em `main` que
-mexa em `web/`, nos recursos ou no layout, e publica o resultado.
+mexa em `web/`, nos recursos ou no layout: roda o teste de áudio, monta o site
+e publica no branch `gh-pages`.
 
-**Antes da primeira publicação**, ligue o Pages uma vez: em **Settings > Pages**,
-no campo *Source*, escolha **GitHub Actions**. O token do Actions não tem
-permissão para ligar isso sozinho. Depois, em **Actions > Versão navegador
-(GitHub Pages)**, clique em *Run workflow*.
+**Uma vez só**, ligue o Pages: em **Settings > Pages**, em *Source*, escolha
+**Deploy from a branch**, o branch **`gh-pages`** e a pasta **`/ (root)`**.
+O token do Actions pode escrever no repositório, mas não tem permissão para
+ligar o Pages sozinho. Em um ou dois minutos o endereço acima começa a
+funcionar.
 
 ## MacBook: jeito mais fácil
 
