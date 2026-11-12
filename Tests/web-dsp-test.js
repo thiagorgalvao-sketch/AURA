@@ -146,6 +146,28 @@ console.log('Layout da web igual ao do plugin (Source/Layout.h)');
   check(knobsOk, 'posições dos knobs iguais');
 }
 
+console.log('Faixas e valores padrão iguais aos do plugin (PluginProcessor.cpp)');
+{
+  const fs = require('fs');
+  const L = require('../web/layout.js');
+  const cpp = fs.readFileSync(__dirname + '/../Source/PluginProcessor.cpp', 'utf8');
+  const eq = cpp.match(/auto eq = \[\] \{ return NormalisableRange<float> \((-?[\d.]+)f, (-?[\d.]+)f, (-?[\d.]+)f\)/);
+  const n = '(-?[\\d.]+)f';
+  const faixa = (id) => {
+    let m = cpp.match(new RegExp('ParamIDs::' + id + '[\\s\\S]{0,160}?NormalisableRange<float> \\(' + n + ', ' + n + ', ' + n + '\\), ' + n));
+    if (m) return { min: +m[1], max: +m[2], step: +m[3], def: +m[4] };
+    m = cpp.match(new RegExp('ParamIDs::' + id + '[\\s\\S]{0,120}?eq\\(\\), ' + n));
+    if (m && eq) return { min: +eq[1], max: +eq[2], step: +eq[3], def: +m[1] };
+    return null;
+  };
+  const difs = Object.keys(L.params).filter((id) => {
+    const c = faixa(id), w = L.params[id];
+    return !c || ['min', 'max', 'step', 'def'].some((k) => Math.abs(c[k] - w[k]) > 1e-4);
+  });
+  console.log(`  ${Object.keys(L.params).length} controles conferidos` + (difs.length ? `, divergências: ${difs.join(',')}` : ''));
+  check(difs.length === 0, 'faixa, passo e valor padrão iguais aos do plugin');
+}
+
 console.log('Silêncio e canais');
 {
   const d = new AuraDsp(SR), out = new Float32Array(BLOCK);

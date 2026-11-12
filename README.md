@@ -122,11 +122,9 @@ O workflow `.github/workflows/pages.yml` faz isso a cada push em `main` que
 mexa em `web/`, nos recursos ou no layout: roda o teste de áudio, monta o site
 e publica no branch `gh-pages`.
 
-**Uma vez só**, ligue o Pages: em **Settings > Pages**, em *Source*, escolha
-**Deploy from a branch**, o branch **`gh-pages`** e a pasta **`/ (root)`**.
-O token do Actions pode escrever no repositório, mas não tem permissão para
-ligar o Pages sozinho. Em um ou dois minutos o endereço acima começa a
-funcionar.
+O Pages já está ligado, servindo o branch `gh-pages`. Se um dia o endereço
+parar de funcionar, confira em **Settings > Pages** que *Source* está em
+**Deploy from a branch**, branch **`gh-pages`**, pasta **`/ (root)`**.
 
 ## MacBook: jeito mais fácil
 
@@ -226,7 +224,8 @@ confere que `web/layout.js` continua igual a `Source/Layout.h`. O segundo abre
 o site num Chromium de verdade, com um baixo em E1 como entrada falsa, e checa
 o afinador, o silêncio com o afinador ligado, os knobs, os footswitches, o
 menu, o estado salvo, o painel girado no celular em pé e o funcionamento sem
-internet.
+internet. O primeiro também confere que a faixa, o passo e o valor padrão de
+cada controle continuam iguais aos de `Source/PluginProcessor.cpp`.
 
 ## Aproximando o som da referência
 
