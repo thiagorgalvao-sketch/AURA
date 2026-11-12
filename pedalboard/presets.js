@@ -85,7 +85,7 @@ const PRESETS = [
   },
   {
     id: 'rato',
-    nome: 'RATO DO PORÃO',
+    nome: 'RAT',
     sub: 'drive 2',
     cor: '#8c2f2f',
     cadeia: ['consoleEq', 'comp', 'eq', 'amp', 'fuzz', 'eq2'],
@@ -112,7 +112,7 @@ const PRESETS = [
   },
   {
     id: 'chora',
-    nome: 'CHORA',
+    nome: 'CHORUS',
     sub: 'drive + chorus',
     cor: '#2f6f6f',
     cadeia: ['consoleEq', 'comp', 'eq', 'amp', 'drive', 'chorus'],
@@ -181,7 +181,7 @@ const PEDAIS = {
     ],
   },
   fuzz: {
-    nome: 'RATO DO PORÃO', sub: 'fuzz', cor: '#7a2626',
+    nome: 'RAT', sub: 'distorção', cor: '#7a2626',
     knobs: [
       { id: 'drive', rot: 'DRIVE', min: 0,   max: 100,  passo: 1,   un: '' },
       { id: 'tone',  rot: 'TONE',  min: 300, max: 6000, passo: 10,  un: 'Hz' },
@@ -197,7 +197,7 @@ const PEDAIS = {
     ],
   },
   chorus: {
-    nome: 'CHORA', sub: 'chorus', cor: '#26645f',
+    nome: 'CHORUS', sub: 'chorus', cor: '#26645f',
     knobs: [
       { id: 'rate',  rot: 'RATE',  min: 0.05, max: 4,  passo: 0.01, un: 'Hz' },
       { id: 'depth', rot: 'DEPTH', min: 0,    max: 100, passo: 1,   un: '%' },

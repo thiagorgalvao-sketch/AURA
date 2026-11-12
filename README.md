@@ -119,8 +119,8 @@ ajustes ficam salvos no aparelho. Atalhos no computador: `E` liga o drive,
 **https://thiagorgalvao-sketch.github.io/AURA/pedalboard/**
 
 Os oito presets do concerto do MainStage ("PRESET LOGIC : MAIN STAGE CORTES"),
-recriados como um pedalboard que roda no navegador: COLORINDO, CAIXA SUJA, RATO
-DO PORÃO, OCTAVIO SUB, MACRO SYNTH, CHORA, TUDO JUNTO e SYNTH MOOG.
+recriados como um pedalboard que roda no navegador: COLORINDO, CAIXA SUJA, RAT,
+OCTAVIO SUB, MACRO SYNTH, CHORUS, TUDO JUNTO e SYNTH MOOG.
 
 A ordem dos pedais e os valores vieram dos próprios arquivos `.patch` do
 MainStage — o que foi lido e o que foi recriado está em
