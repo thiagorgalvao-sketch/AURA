@@ -3,8 +3,8 @@ Autor e titular: Thiago Galvão
 Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 Leis 9.609/1998 e 9.610/1998 — a proteção independe de registro.
 
-Gerado em (UTC): 2026-11-12T18:54:56Z
-Commit do repositório: 36e99ea51c3ea0b9d6adad08ca1c65384e50043e
+Gerado em (UTC): 2026-11-12T21:08:06Z
+Commit do repositório: 1798d7ae495f7e209f7615f48a0b0241e5cf235d
 Arquivos: 45
 
 SHA-256 de cada arquivo:
@@ -14,7 +14,7 @@ ed7c228484cf0d8308e825521b5889de570b979fbfd060644a99b5e418a018ad  .github/workfl
 4043d00f19a8b3cc5944c2c3de17ed3e36187133bab6ccafab1a54f71fde1cfd  AUTORIA.md
 6a1a64b5978b54190618f2d28795a61e6e687da8d4f09c6f86103dd9031f1422  CMakeLists.txt
 9355d790044f95fd15e9d59a26fdc442810f29d7ad146abb5c6d796c3c68d3c6  LICENSE
-9854e1659e5640a4771a82d523673f55b365584053c477343e243cd79c6c2441  README.md
+a9feb878c6b1deb29010b911c54a11bc32d0cd520924eeacc180d327217c753f  README.md
 5f2c0cd78e815a16f5167e69c7fcbde8748011af675cb6129f0c6a176457b87e  Resources/ir/cab_1x15.wav
 18b691c2ff4b1978f23fea94b94073961510839897a59c462cdf68688624b957  Resources/ir/cab_4x10.wav
 85a8bd639d1a8e8e9ee49a69257841c9f4df3cf3e336150a346bb5e4f2dc9642  Resources/ui/arcs_lit.png
@@ -35,16 +35,16 @@ b8341cfe759099d9a2041142363f7f843b6a4fb8a3da96720f8de00d1362fced  Source/PluginP
 b8ec06df2cf1d885d498597030221a7b129f0d42774b50b8a45ee485deaf1983  Source/Tuner.h
 e7aae62087ed89d8a3e74175dd4125a449cf65b2ad3c37fa25c1c9fc3b5c00b2  TERCEIROS.md
 ebe7d714122fc7fdf3f9ad6d15c79945a788e85335c57f41fdd102aa70ad0c2d  Tests/DspTest.cpp
-43f58e379d1f4ff4aa51421fe278dd1efdfeb006f7957c6f643327cfdbbd1e23  Tests/pedalboard-ui-test.py
+e5cb967c5f8cf33244ce5e54579969495746e19c993247e5a88e44e0476e7b99  Tests/pedalboard-ui-test.py
 502c6f961426bf96d77d903ddfeb1da5e16d12271eb483c94c49d10e98f645fc  Tests/web-dsp-test.js
-f8f7966a8b15341d846f0587c6dc3a9a5931df7000efb144630b8177aa9e78e8  Tests/web-ui-test.py
+7eed4b6da2604411043d229106272cf5c82df9a6b0ef8620737ded452754ffeb  Tests/web-ui-test.py
 a5537db14b7262ec697372816e461ab69384bca35c81588cd1a1b4838e57d065  Tools/FootswitchRender/Main.cpp
 63102f994f228c5d8bd9ce4a79776d7d6af6687faf72e22d6e7852f11db99fe7  Tools/autoria-hashes.sh
 a612461f091cc00a8fbb23d4909d66b6e309d1dc25e6e09646467336f21cc169  Tools/build-web.sh
 ca7626bc0e261e70fa463ae8508a8df0ce7bab1dc0146ab2bee34ecd834fd0ed  Tools/build_ui_assets.py
 ffb95917793c105ab113fe9414b69c8c0d90c44963ac6aed67e8e864641e39c1  Tools/make_cab_irs.py
 27a66fe0410223512589d1b8f3735f97f1fcbb7de27d83f47694fe28167387c7  packaging/Instalar no Mac.command
-53fd67e6698ddeb846a4c65cba685b676955d1a4aee8c7788bff868bc0318446  web/app.js
+2e035ed5a794f038da077e681d77d820019e919c7b5f6dfb83a963b51ea682e7  web/app.js
 5e0c2605d0e865c1b91f97ad6c7fc6928d81ff135fcbf4bf7a1f3f6950e508fb  web/aura-processor.js
 9f5fe30817f6e3f1a3cc6608513f5dc4369a9af3ca0373643907223be5a0481e  web/icons/icon-192.png
 50d9345cfcbc6cf684a3b7a9c937778691432678244afafe93dbfd8b4a97547b  web/icons/icon-512.png
@@ -57,7 +57,7 @@ e960945871ee31fc5289a364b0bfa00850150cd3828ee602e790722bc487aeab  web/tuner.js
 --------------------------------------------------------------------
 
 RESUMO DA OBRA (SHA-256 da lista acima):
-22bb4112863b832575d8e4aca57c4d9b40632e584eb4053a5532d9208668f298
+400853acec913575744931d1f8beb8860a82795ca443b541c78936e2aa7f25c9
 
 Esse resumo identifica a obra inteira nesta data. Qualquer alteração em
 qualquer arquivo muda o resumo. Para ter prova de data independente,
