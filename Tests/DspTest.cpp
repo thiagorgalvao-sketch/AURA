@@ -452,10 +452,116 @@ int main()
         check (std::abs (b.apvts.getRawParameterValue (ParamIDs::drive)->load() + 8.0f) < 0.05f, "valores do preset restaurados");
     }
 
+    std::printf ("Afinador: precisão da detecção\n");
+    {
+        struct Case { const char* name; double hz; double fundamental, second, third; double rate; };
+        const Case cases[] = {
+            { "B0 (Si grave, 5 cordas)", 30.868, 1.0, 0.0, 0.0, 48000.0 },
+            { "E1 (Mi)",                 41.203, 1.0, 0.0, 0.0, 48000.0 },
+            { "A1 (Lá)",                 55.0,   1.0, 0.0, 0.0, 44100.0 },
+            { "D2 (Ré)",                 73.416, 1.0, 0.0, 0.0, 96000.0 },
+            { "G2 (Sol)",                97.999, 1.0, 0.0, 0.0, 48000.0 },
+            { "E1 com harmônicos fortes", 41.203, 0.3, 1.0, 0.6, 48000.0 },
+            { "A1 +12 cents",            55.0 * std::pow (2.0, 12.0 / 1200.0), 0.5, 0.8, 0.4, 48000.0 },
+            { "G4 (casa 24)",            391.995, 1.0, 0.3, 0.0, 48000.0 },
+        };
+        for (const auto& c : cases)
+        {
+            Tuner t;
+            t.prepare (c.rate);
+            std::vector<float> block (480);
+            const float* chans[1] = { block.data() };
+            Tuner::Reading r;
+            for (int blk = 0; blk < 60; ++blk)
+            {
+                for (int i = 0; i < 480; ++i)
+                {
+                    const double ph = 2.0 * juce::MathConstants<double>::pi * c.hz * (blk * 480 + i) / c.rate;
+                    block[(size_t) i] = (float) (0.2 * (c.fundamental * std::sin (ph) + c.second * std::sin (2 * ph + 0.7) + c.third * std::sin (3 * ph + 1.9)));
+                }
+                t.push (chans, 1, 480);
+                r = t.analyse();
+            }
+            const double errCents = r.valid ? 1200.0 * std::log2 ((double) r.hz / c.hz) : 999.0;
+            std::printf ("  %-26s %8.3f Hz -> %8.3f Hz  %s%d  erro %+.2f cents\n", c.name, c.hz, (double) r.hz,
+                         Tuner::noteName (r.midiNote).toRawUTF8(), Tuner::noteOctave (r.midiNote), errCents);
+            check (r.valid && std::abs (errCents) < 1.0, "erro menor que 1 cent");
+        }
+
+        Tuner t;
+        t.prepare (48000.0);
+        std::vector<float> block (480);
+        const float* chans[1] = { block.data() };
+        juce::Random rnd (3);
+        Tuner::Reading r;
+        for (int blk = 0; blk < 60; ++blk)
+        {
+            for (auto& x : block) x = 0.2f * (rnd.nextFloat() * 2.0f - 1.0f);
+            t.push (chans, 1, 480);
+            r = t.analyse();
+        }
+        check (! r.valid, "ruído não vira nota");
+        for (int blk = 0; blk < 60; ++blk)
+        {
+            std::fill (block.begin(), block.end(), 0.0f);
+            t.push (chans, 1, 480);
+            r = t.analyse();
+        }
+        check (! r.valid, "silêncio não vira nota");
+    }
+
+    std::printf ("Afinador ligado: saída muda, detector recebe a entrada\n");
+    {
+        AuraBassAudioProcessor p;
+        setParam (p, ParamIDs::tuner, 1.0f);
+        const auto out = runBlocks (p, 41.203f, 0.25f, blockSize, { blockSize }, 48000);
+        double peak = 0; for (size_t i = 4800; i < out.size(); ++i) peak = std::max (peak, (double) std::abs (out[i]));
+        const auto r = p.getTuner().analyse();
+        std::printf ("  pico na saída %.2e, nota %s%d (%.2f Hz)\n", peak, Tuner::noteName (r.midiNote).toRawUTF8(), Tuner::noteOctave (r.midiNote), (double) r.hz);
+        check (peak < 1.0e-6, "saída muda");
+        check (r.valid && r.midiNote == 28 && std::abs (r.cents) < 1.0f, "detecta E1 pela entrada do plugin");
+
+        juce::MemoryBlock mb;
+        p.getStateInformation (mb);
+        AuraBassAudioProcessor q;
+        q.setStateInformation (mb.getData(), (int) mb.getSize());
+        check (q.apvts.getRawParameterValue (ParamIDs::tuner)->load() < 0.5f, "sessão nunca reabre com o afinador ligado");
+    }
+
+    std::printf ("Ligar/desligar o afinador sem estalo\n");
+    {
+        AuraBassAudioProcessor p;
+        p.prepareToPlay (sr, blockSize);
+        juce::AudioBuffer<float> buf (2, blockSize); juce::MidiBuffer midi;
+        std::vector<float> out;
+        for (int blk = 0; blk < 150; ++blk)
+        {
+            if (blk == 60) setParam (p, ParamIDs::tuner, 1.0f);
+            if (blk == 100) setParam (p, ParamIDs::tuner, 0.0f);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float x = 0.25f * (float) std::sin (2.0 * juce::MathConstants<double>::pi * 100.0 * (blk * blockSize + i) / sr);
+                buf.setSample (0, i, x); buf.setSample (1, i, x);
+            }
+            p.processBlock (buf, midi);
+            for (int i = 0; i < blockSize; ++i) out.push_back (buf.getSample (0, i));
+        }
+        const double steady = maxJump (out, 10000, 30000);
+        const double sw = std::max (maxJump (out, 60 * blockSize - 50, 60 * blockSize + 3000), maxJump (out, 100 * blockSize - 50, 100 * blockSize + 3000));
+        std::printf ("  maior salto: estável %.4f, nas trocas %.4f\n", steady, sw);
+        check (sw <= steady * 1.15, "fade sem descontinuidade");
+    }
+
     // Salva uma imagem da interface (útil para conferir o layout sem abrir um host)
     if (auto* outPath = std::getenv ("AURA_SNAPSHOT"))
     {
         AuraBassAudioProcessor p;
+        if (auto* hzText = std::getenv ("AURA_SNAPSHOT_TUNER"))
+        {
+            // Afinador ligado, com uma nota tocando (frequência em Hz)
+            setParam (p, ParamIDs::tuner, 1.0f);
+            runBlocks (p, juce::String (hzText).getFloatValue(), 0.25f, blockSize, { blockSize }, 48000);
+        }
         if (std::getenv ("AURA_SNAPSHOT_OFF") != nullptr)
         {
             setParam (p, ParamIDs::driveOn, 0.0f);
@@ -467,6 +573,9 @@ int main()
             p.setUiScale (juce::String (sc).getFloatValue());
         std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());
         std::printf ("Editor %dx%d\n", ed->getWidth(), ed->getHeight());
+        if (std::getenv ("AURA_SNAPSHOT_TUNER") != nullptr)
+            for (int i = 0; i < 12; ++i)     // deixa o timer da interface ler o detector
+                juce::MessageManager::getInstance()->runDispatchLoopUntil (40);
         auto img = ed->createComponentSnapshot (ed->getLocalBounds(), true, 2.0f);
         juce::File file (outPath);
         file.deleteFile();

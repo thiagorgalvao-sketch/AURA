@@ -65,6 +65,9 @@ juce_add_binary_data(AuraAssets SOURCES
     Resources/ui/cab_off.png
     Resources/ui/footswitch_down.png
     Resources/ui/arcs_lit.png
+    Resources/ui/led_tuner_on.png
+    Resources/ui/tuner_down.png
+    Resources/fonts/RussoOne-Regular.ttf
     Resources/fonts/Roboto.ttf
     Resources/ir/cab_4x10.wav
     Resources/ir/cab_1x15.wav)
@@ -102,6 +105,7 @@ if(AURA_BUILD_TESTS)
     target_compile_definitions(AuraDSPTest PRIVATE
         JucePlugin_Name="AURA Bass"
         JucePlugin_VersionString="${PROJECT_VERSION}"
+        JUCE_MODAL_LOOPS_PERMITTED=1
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0)
     target_link_libraries(AuraDSPTest PRIVATE

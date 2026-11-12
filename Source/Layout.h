@@ -34,6 +34,13 @@ namespace AuraLayout
     struct Rect { float x, y, w, h; };
     inline constexpr Rect driveHit { 554.0f, 274.0f, 126.0f, 48.0f };
 
+    // Footswitch do afinador (TUNER) + LED verde, espelhado no canto inferior esquerdo
+    inline constexpr float tunerSwitchX = 70.5f, tunerSwitchY = 298.0f;
+    inline constexpr float tunerLedX = 110.0f, tunerLedY = 298.0f;
+    inline constexpr Rect tunerHit { 46.0f, 274.0f, 126.0f, 48.0f };
+    // Visor do afinador (cobre os knobs enquanto o afinador está ligado)
+    inline constexpr Rect tunerDisplay { 30.0f, 98.0f, 666.0f, 156.0f };
+
     // CAB (rótulo, LED laranja e chave alavanca)
     inline constexpr float cabLedX = 671.35f, cabLedY = 138.65f;
     inline constexpr float cabToggleX = 671.5f, cabToggleY = 175.0f;

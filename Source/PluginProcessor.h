@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
+#include "Tuner.h"
 
 namespace ParamIDs
 {
@@ -14,6 +15,7 @@ namespace ParamIDs
     inline constexpr const char* blend    = "blend";
     inline constexpr const char* cab      = "cab";
     inline constexpr const char* driveOn  = "driveOn";
+    inline constexpr const char* tuner    = "tuner";
 }
 
 // Frequências do tone stack. Ajuste aqui ao comparar com uma referência (veja o README).
@@ -91,6 +93,9 @@ public:
     int getCabIRVersion() const noexcept { return cabIrVersion.load(); }
     static juce::StringArray builtinCabNames() { return { "4x10", "1x15" }; }
 
+    // Afinador: com o parâmetro "tuner" ligado, a saída fica muda e a entrada alimenta o detector
+    Tuner& getTuner() noexcept { return tuner; }
+
     // Escala da interface (100/125/150%), salva junto com a sessão
     float getUiScale() const noexcept { return uiScale.load(); }
     void setUiScale (float scale) noexcept { uiScale.store (juce::jlimit (1.0f, 1.5f, scale)); }
@@ -134,7 +139,8 @@ private:
 
     juce::AudioBuffer<float> dryBuffer, preCabBuffer;
 
-    juce::SmoothedValue<float> driveGain, blendMix, cabMix, outputGain, autoGain;
+    juce::SmoothedValue<float> driveGain, blendMix, cabMix, outputGain, autoGain, tunerMute;
+    Tuner tuner;
 
     // Economia de CPU: a saturação (DRIVE desligado) e a convolução (CAB desligado) param de
     // ser processadas; ao voltar, os filtros são zerados e o crossfade evita qualquer clique.
@@ -149,6 +155,7 @@ private:
     std::atomic<float>* pBlend    = nullptr;
     std::atomic<float>* pCab      = nullptr;
     std::atomic<float>* pDriveOn  = nullptr;
+    std::atomic<float>* pTuner    = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AuraBassAudioProcessor)
 };

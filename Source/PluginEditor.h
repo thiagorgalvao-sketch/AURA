@@ -10,8 +10,8 @@ struct AuraAssets
 {
     AuraAssets();
 
-    juce::Image background, pointer, ledDriveOn, ledCabOn, cabOff, footswitchDown, arcsLit;
-    juce::Typeface::Ptr valueTypeface;
+    juce::Image background, pointer, ledDriveOn, ledCabOn, cabOff, footswitchDown, arcsLit, ledTunerOn, tunerDown;
+    juce::Typeface::Ptr valueTypeface, titleTypeface;
     juce::Font valueFont { juce::FontOptions() };
 };
 
@@ -55,6 +55,25 @@ private:
 };
 
 //==============================================================================
+// Visor do afinador: nota, desvio em cents e frequência. Cobre os knobs enquanto ligado.
+class TunerDisplay : public juce::Component
+{
+public:
+    explicit TunerDisplay (const AuraAssets& a) : assets (a) {}
+
+    void restart();                              // ao ligar: descarta leituras antigas
+    void update (const Tuner::Reading&);         // chamado pelo timer do painel
+    void paint (juce::Graphics&) override;
+
+private:
+    const AuraAssets& assets;
+    bool hasNote = false;
+    int note = 0, candidate = -1000, candidateCount = 0, warmup = 0;
+    float cents = 0.0f, hz = 0.0f;
+    double lastValid = 0.0;
+};
+
+//==============================================================================
 // O painel inteiro, sempre no tamanho original (726x339); o editor aplica a escala
 class AuraPanel : public juce::Component,
                   private juce::Timer
@@ -89,9 +108,10 @@ private:
     std::vector<std::unique_ptr<PointerKnob>> knobs;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> knobAttachments;
 
-    HotSpot driveSpot, cabSpot;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> driveAttachment, cabAttachment;
-    bool driveOn = true, cabOn = true;
+    HotSpot driveSpot, cabSpot, tunerSpot;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> driveAttachment, cabAttachment, tunerAttachment;
+    TunerDisplay tunerDisplay { *assets };
+    bool driveOn = true, cabOn = true, tunerOn = false;
     int cabIrVersion = -1;
     juce::String cabIrName;
 

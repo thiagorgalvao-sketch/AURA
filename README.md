@@ -16,6 +16,16 @@ Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presen
 
 O valor de cada knob aparece embaixo dele, e o arco metálico em volta acende até o valor (a partir do centro nos controles em dB, a partir do início no Blend). Duplo clique volta o knob ao valor padrão: Level, Drive, Low, Mid e High em 0.0 dB, Presence em 3.0 dB e Blend em 100%. Segure **Shift** ao arrastar (ou ao girar a roda do mouse) para ajuste fino.
 
+### Afinador
+
+Pise no footswitch **TUNER** (canto inferior esquerdo, LED verde). O painel dos knobs vira o visor do afinador e a saída fica muda, como num pedal afinador. Pise de novo para voltar a tocar.
+
+- O visor mostra a nota e a oitava, o desvio em cents (medidor de −50 a +50) e a frequência em Hz.
+- Âmbar com seta: a seta da esquerda acende quando a nota está baixa, a da direita quando está alta. Verde: afinado (dentro de ±3 cents).
+- Faixa: do Si grave do baixo de 5 cordas (30,9 Hz) até cerca de 650 Hz. Referência fixa em Lá = 440 Hz.
+- "Tuner" é um parâmetro do plugin: dá para mapear a um pedal MIDI na DAW. Ele nunca volta ligado ao reabrir uma sessão.
+- A detecção (`Source/Tuner.h`) usa o método YIN sobre a entrada crua, antes de qualquer efeito. Nos testes, o erro fica abaixo de 0,5 cent, mesmo com harmônicos mais fortes que a fundamental.
+
 ### Compensação de volume do DRIVE
 
 O som saturado é compensado automaticamente para ficar no mesmo volume do limpo (calibrado com um sinal de −12 dBFS, nível típico de baixo na entrada). Ligar o footswitch muda o timbre, não o volume. O Level continua ajustando a saída final.

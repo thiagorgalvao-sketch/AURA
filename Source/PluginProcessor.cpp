@@ -55,6 +55,7 @@ AuraBassAudioProcessor::AuraBassAudioProcessor()
     pBlend    = apvts.getRawParameterValue (ParamIDs::blend);
     pCab      = apvts.getRawParameterValue (ParamIDs::cab);
     pDriveOn  = apvts.getRawParameterValue (ParamIDs::driveOn);
+    pTuner    = apvts.getRawParameterValue (ParamIDs::tuner);
     applyCabIR();
 }
 
@@ -227,6 +228,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::crea
                      NormalisableRange<float> (0.0f, 100.0f, 1.0f), 100.0f, pctAttr));
     p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::cab, 1 }, "Cab", true));
     p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::driveOn, 1 }, "Drive On", true));
+    p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::tuner, 1 }, "Tuner", false));
 
     return { p.begin(), p.end() };
 }
@@ -338,6 +340,10 @@ void AuraBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     lastCompDrive = pDrive->load();
     autoGain.setCurrentAndTargetValue (levelCompensation (lastCompDrive));
 
+    tuner.prepare (currentSampleRate);
+    tunerMute.reset (currentSampleRate, 0.02);
+    tunerMute.setCurrentAndTargetValue (pTuner->load() > 0.5f ? 0.0f : 1.0f);
+
     drivePathIdle = cabIdle = false;
 }
 
@@ -371,12 +377,34 @@ void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         autoGain.setTargetValue (levelCompensation (d));
     }
 
+    // Afinador: o detector recebe a entrada crua (antes de qualquer processamento)
+    const bool tunerOn = pTuner->load() > 0.5f;
+    if (tunerOn)
+        tuner.push (buffer.getArrayOfReadPointers(), procChannels, numSamples);
+
     // Blocos maiores que o anunciado são processados em pedaços (nada é realocado aqui)
     for (int start = 0; start < numSamples; start += maxBlockSize)
     {
         const int len = juce::jmin (maxBlockSize, numSamples - start);
         juce::AudioBuffer<float> chunk (buffer.getArrayOfWritePointers(), procChannels, start, len);
         processChunk (chunk, procChannels);
+    }
+
+    // Afinador ligado = saída muda (fade de 20 ms, sem estalo)
+    tunerMute.setTargetValue (tunerOn ? 0.0f : 1.0f);
+    if (tunerMute.isSmoothing())
+    {
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float g = tunerMute.getNextValue();
+            for (int ch = 0; ch < procChannels; ++ch)
+                buffer.getWritePointer (ch)[i] *= g;
+        }
+    }
+    else if (tunerOn)
+    {
+        for (int ch = 0; ch < procChannels; ++ch)
+            buffer.clear (ch, 0, numSamples);
     }
 
     // Entrada mono, saída estéreo: copia o resultado para os outros canais
@@ -591,6 +619,9 @@ void AuraBassAudioProcessor::setStateInformation (const void* data, int sizeInBy
         tree.removeProperty (id, nullptr);
 
     apvts.replaceState (tree);
+    // O afinador nunca volta ligado numa sessão (o plugin abriria mudo)
+    if (auto* t = apvts.getParameter (ParamIDs::tuner))
+        t->setValueNotifyingHost (0.0f);
     setCabIR (ir);
 }
 

@@ -14,6 +14,8 @@ Saídas (Resources/ui), todas em 2x:
   pointer.png         indicador do knob (gira na interface), centrado no quadro
   led_drive_on.png    LED azul aceso (sobreposição)
   footswitch_down.png footswitch do DRIVE pressionado (sobreposição)
+  led_tuner_on.png    LED verde do afinador aceso (sobreposição)
+  tuner_down.png      footswitch do afinador pressionado (sobreposição)
   arcs_lit.png        arcos dos knobs "acesos" (a interface revela até o valor)
   led_cab_on.png      LED laranja aceso (sobreposição)
   cab_off.png         chave do CAB desligada (alavanca espelhada, sobreposição)
@@ -51,6 +53,10 @@ FS_CENTER = (1385.0, 858.0)              # canto inferior direito
 FS_WIPE = (145, 398, 352, 494)            # região do antigo botão power + LED + rótulo
 FS_DOWN_HALF = 48
 LED_DRIVE_NEW = (1306.0, 858.0)
+
+# Footswitch do afinador (TUNER), espelhado no canto inferior esquerdo, com LED verde
+FS_TUNER = (215.0, 858.0)
+LED_TUNER = (294.0, 858.0)
 LED_DRIVE_HALF = 22
 LED_CAB = (1416.7, 579.3, 9.0)
 LED_HALF = 32                             # meio lado do recorte do LED (px)
@@ -374,11 +380,15 @@ def main():
     drop = np.roll(a_up, 7, axis=0)
     drop = np.asarray(Image.fromarray((drop * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(7))).astype(np.float32) / 255.0
     mul = (fs_shadow ** 1.6) * (1.0 - 0.45 * drop)
-    fx0, fy0 = int(FS_CENTER[0]) - fh, int(FS_CENTER[1]) - fh
-    img[fy0:fy0 + 2 * fh, fx0:fx0 + 2 * fh] *= mul[..., None]
+    for fc in (FS_CENTER, FS_TUNER):
+        fx0, fy0 = int(fc[0]) - fh, int(fc[1]) - fh
+        img[fy0:fy0 + 2 * fh, fx0:fx0 + 2 * fh] *= mul[..., None]
     fs_base = img.copy()
-    paste(img, fs_up[..., :3], FS_CENTER[0], FS_CENTER[1], fs_up[..., 3:4] / 255.0)
+    for fc in (FS_CENTER, FS_TUNER):
+        paste(img, fs_up[..., :3], fc[0], fc[1], fs_up[..., 3:4] / 255.0)
     paste(img, led_off_patch, LED_DRIVE_NEW[0], LED_DRIVE_NEW[1], radial_alpha(LED_DRIVE_HALF, 13, 21))
+    # LED verde do afinador: o mesmo LED com os canais verde e azul trocados
+    paste(img, led_off_patch[..., [0, 2, 1]], LED_TUNER[0], LED_TUNER[1], radial_alpha(LED_DRIVE_HALF, 13, 21))
 
     # 4) Textos impressos genéricos da primeira referência
     gp = np.asarray(Image.open(os.path.join(MOCK, "generic_print.png")).convert("RGBA")).astype(np.float32)
@@ -410,6 +420,7 @@ def main():
     composite(img, text_layer("AURA BASS", russo(77), 163, 380, spacing=1.5), (218, 219, 223), 0.97, True, 11)
     # Rótulo do footswitch (à esquerda do LED)
     composite(img, text_layer("ENGAGE", roboto(19), 1274, 865, "rs", 1.8), (170, 172, 177), 1.0)
+    composite(img, text_layer("TUNER", roboto(19), 326, 865, "ls", 1.8), (170, 172, 177), 1.0)
 
     # Sobreposições do DRIVE: LED aceso e footswitch pressionado
     img_on = img.copy()
@@ -419,6 +430,12 @@ def main():
     down_rgb = fs_down[..., :3] * 0.94      # um pouco mais escuro: afundado
     paste(img_down, down_rgb, FS_CENTER[0], FS_CENTER[1], fs_down[..., 3:4] / 255.0)
     footswitch_down = crop_rgba(img_down, FS_CENTER[0], FS_CENTER[1], FS_DOWN_HALF, np.ones((2 * FS_DOWN_HALF, 2 * FS_DOWN_HALF), np.float32))
+
+    # Sobreposições do afinador
+    paste(img_on, led_on_patch[..., [0, 2, 1]], LED_TUNER[0], LED_TUNER[1], radial_alpha(LED_DRIVE_HALF, 13, 21))
+    led_tuner_on = crop_rgba(img_on, LED_TUNER[0], LED_TUNER[1], LED_DRIVE_HALF)
+    paste(img_down, down_rgb, FS_TUNER[0], FS_TUNER[1], fs_down[..., 3:4] / 255.0)
+    tuner_down = crop_rgba(img_down, FS_TUNER[0], FS_TUNER[1], FS_DOWN_HALF, np.ones((2 * FS_DOWN_HALF, 2 * FS_DOWN_HALF), np.float32))
 
     # 6) Chave do CAB desligada: alavanca espelhada (chave de dois lados)
     tx, ty = TOGGLE_CENTER
@@ -437,6 +454,8 @@ def main():
     led_cab_on.save(os.path.join(OUT, "led_cab_on.png"))
     cab_off.save(os.path.join(OUT, "cab_off.png"))
     footswitch_down.save(os.path.join(OUT, "footswitch_down.png"))
+    led_tuner_on.save(os.path.join(OUT, "led_tuner_on.png"))
+    tuner_down.save(os.path.join(OUT, "tuner_down.png"))
     build_arcs_lit(img, plate).crop((CROP_X, CROP_Y, CROP_X + CROP_W, CROP_Y + CROP_H)).save(os.path.join(OUT, "arcs_lit.png"))
 
     # Prévia com as sobreposições "ligadas" para conferência
