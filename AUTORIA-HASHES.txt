@@ -3,8 +3,8 @@ Autor e titular: Thiago Galvão
 Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 Leis 9.609/1998 e 9.610/1998 — a proteção independe de registro.
 
-Gerado em (UTC): 2026-11-12T18:27:37Z
-Commit do repositório: 415ef2d6dc18887d9d27a8ba522ed734dfda62f1
+Gerado em (UTC): 2026-11-12T18:46:04Z
+Commit do repositório: 4f29a894dba56217c801b9fa13a35b33552c6770
 Arquivos: 45
 
 SHA-256 de cada arquivo:
@@ -14,7 +14,7 @@ ed7c228484cf0d8308e825521b5889de570b979fbfd060644a99b5e418a018ad  .github/workfl
 4043d00f19a8b3cc5944c2c3de17ed3e36187133bab6ccafab1a54f71fde1cfd  AUTORIA.md
 6a1a64b5978b54190618f2d28795a61e6e687da8d4f09c6f86103dd9031f1422  CMakeLists.txt
 9355d790044f95fd15e9d59a26fdc442810f29d7ad146abb5c6d796c3c68d3c6  LICENSE
-aae5d5b2ee8474e1500e8e701b35d00aa791e88e925227383e1cc2c9b71e3e74  README.md
+41db1a1985167ff104f4e59533e361b1a7ed14eb03bd84d0b2ade4ec6dce8461  README.md
 5f2c0cd78e815a16f5167e69c7fcbde8748011af675cb6129f0c6a176457b87e  Resources/ir/cab_1x15.wav
 18b691c2ff4b1978f23fea94b94073961510839897a59c462cdf68688624b957  Resources/ir/cab_4x10.wav
 85a8bd639d1a8e8e9ee49a69257841c9f4df3cf3e336150a346bb5e4f2dc9642  Resources/ui/arcs_lit.png
@@ -57,7 +57,7 @@ e960945871ee31fc5289a364b0bfa00850150cd3828ee602e790722bc487aeab  web/tuner.js
 --------------------------------------------------------------------
 
 RESUMO DA OBRA (SHA-256 da lista acima):
-3cbe048cdd5efa8d45ba2c0578ecdeb03e61e3f0bc45440f943538221b8c2924
+9cf801e883037270a4758f59d9c8568ff51f833db5383f307f474714d188f15c
 
 Esse resumo identifica a obra inteira nesta data. Qualquer alteração em
 qualquer arquivo muda o resumo. Para ter prova de data independente,
