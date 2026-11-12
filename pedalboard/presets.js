@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 // Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 //
-// Origem: "PRESET LOGIC : MAIN STAGE CORTES - FINAL" (8 patches .patch + concerto).
+// Origem: o concerto do MainStage do autor (8 patches .patch + o concerto);
+// os nomes dos arquivos originais estão em pedalboard/PRESETS.md.
 // A cadeia de plugins e os números abaixo foram lidos dos arquivos #Root.cst.
 // Onde o formato do Logic não permite saber a que knob um número corresponde,
 // o valor foi ajustado de ouvido para o mesmo caráter — está marcado com ~.
