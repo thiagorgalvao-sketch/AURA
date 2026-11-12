@@ -69,5 +69,8 @@ cp pedalboard/icons/icon-192.png pedalboard/icons/icon-512.png "$OUT/pedalboard/
 cp LICENSE "$OUT/pedalboard/LICENSE.txt"
 cp "$OUT/CREDITOS.txt" "$OUT/pedalboard/CREDITOS.txt"
 
+VERSAO=$(git rev-parse --short HEAD 2>/dev/null || date -u +%Y%m%d%H%M)
+python3 Tools/versiona-site.py "$OUT" "$VERSAO"
+
 touch "$OUT/.nojekyll"
 echo "site em $OUT ($(du -sh "$OUT" | cut -f1))"

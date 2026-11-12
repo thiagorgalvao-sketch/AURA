@@ -10,6 +10,7 @@
 
 // Registro de autoria — aparece no menu "Sobre" e fica no pacote do app.
 // Remover ou alterar este aviso é vedado pela licença (ver LICENSE).
+const VERSAO_SITE = 'AURA_VERSAO';   // trocado na publicação por Tools/versiona-site.py
 const AUTORIA = [
   'AURA Bass — overdrive e pré de baixo',
   'Copyright (c) 2026 Thiago Galvão',
@@ -928,6 +929,12 @@ async function openMenu(ev, section) {
 
     menuEl.appendChild(document.createElement('hr'));
     menuEl.appendChild(menuHeader('Sobre'));
+    {
+      const v = document.createElement('div');
+      v.className = 'tip';
+      v.textContent = 'Versão ' + (VERSAO_SITE.startsWith('AURA_') ? 'de desenvolvimento' : VERSAO_SITE);
+      menuEl.appendChild(v);
+    }
     for (const line of AUTORIA) {
       const d = document.createElement('div');
       d.className = 'tip';

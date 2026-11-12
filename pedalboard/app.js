@@ -4,6 +4,7 @@
 
 'use strict';
 
+const VERSAO_SITE = 'AURA_VERSAO';   // trocado na publicação por Tools/versiona-site.py
 const AUTORIA = [
   'WORSHIP BASS ESSENTIALS',
   'Copyright (c) 2026 Thiago Galvão',
@@ -330,6 +331,7 @@ function abreMenu() {
 
   menuEl.appendChild(document.createElement('hr'));
   h('Sobre');
+  d('Versão ' + (VERSAO_SITE.startsWith('AURA_') ? 'de desenvolvimento' : VERSAO_SITE));
   AUTORIA.forEach(d);
 
   menuEl.hidden = false;
