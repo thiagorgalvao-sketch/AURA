@@ -81,7 +81,7 @@ LED_CAB = (LED_CAB[0], LED_CAB[1] + DY, LED_CAB[2])
 TOGGLE_CENTER = (TOGGLE_CENTER[0], TOGGLE_CENTER[1] + DY)
 
 # Microtextos ilegíveis da arte (substituídos por textos reais)
-MICRO_WIPES = [(1022, 266, 1182, 324), (932, 876, 1132, 924)]
+MICRO_WIPES = [(1022, 266, 1182, 324), (926, 868, 1140, 934)]
 
 
 def load(name):
@@ -289,8 +289,8 @@ def draw_microprint(img, plate, roboto):
 
     ruler(1040, 1160, 286, False)
     d.text((1040, 314), "MODEL AB-1   SER. 0417", font=roboto(12), fill=255, anchor="ls")
-    ruler(960, 1110, 920, True)
-    d.text((960, 902), "HANDMADE IN BRAZIL", font=roboto(12), fill=255, anchor="ls")
+    ruler(960, 1110, 906, True)
+    d.text((960, 888), "HANDMADE IN BRAZIL", font=roboto(12), fill=255, anchor="ls")
     a = (np.asarray(layer).astype(np.float32) / 255.0 * 0.85)[..., None]
     img[:] = img * (1 - a) + np.array((112, 114, 119), np.float32) * a
 
@@ -347,7 +347,19 @@ def main():
         erase_text(img, plate, r)
 
     # 3) LED do CAB: aceso (sobreposição) e apagado no fundo
-    led_cab_on = crop_rgba(layout, LED_CAB[0], LED_CAB[1], LED_HALF)
+    # O brilho em volta do LED laranja vinha azulado na arte: recolore o halo em tom quente
+    warm = layout.copy()
+    lx, ly, lr = LED_CAB
+    hx0, hy0 = int(round(lx)) - LED_HALF, int(round(ly)) - LED_HALF
+    ys, xs = np.mgrid[hy0:hy0 + 2 * LED_HALF, hx0:hx0 + 2 * LED_HALF].astype(np.float32)
+    dist = np.sqrt((xs - lx) ** 2 + (ys - ly) ** 2)
+    on_p = warm[hy0:hy0 + 2 * LED_HALF, hx0:hx0 + 2 * LED_HALF]
+    base_p = plate[hy0:hy0 + 2 * LED_HALF, hx0:hx0 + 2 * LED_HALF]
+    glow = np.clip(lum(on_p) - lum(base_p), 0, None)[..., None]
+    halo = base_p + glow * np.array((2.6, 1.15, 0.25), np.float32)
+    outside = smoothstep(lr + 0.5, lr + 3.0, dist)[..., None]
+    warm[hy0:hy0 + 2 * LED_HALF, hx0:hx0 + 2 * LED_HALF] = on_p * (1 - outside) + halo * outside
+    led_cab_on = crop_rgba(warm, LED_CAB[0], LED_CAB[1], LED_HALF)
     led_off(img, plate, *LED_CAB, tint=(200, 100, 30))
 
     # 3b) Botão DRIVE: troca o botão power por um footswitch de pisar

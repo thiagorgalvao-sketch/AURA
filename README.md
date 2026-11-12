@@ -42,9 +42,15 @@ Toda IR é ajustada para 0 dB na faixa de 100 a 800 Hz, então ligar o CAB muda 
 
 No menu de presets da DAW: **AURA (padrão)**, **Clean DI**, **Grit leve**, **Drive pesado** e **Slap brilhante**.
 
-### Tamanho da interface e versão
+### Menu, tamanho da interface e versão
 
-Clique com o botão direito em qualquer parte vazia do painel para escolher 100%, 125% ou 150%. O mesmo menu mostra a versão instalada. O tamanho fica salvo na sessão.
+O ícone de três traços no canto superior direito (ou o clique direito numa parte vazia do painel) abre o menu do plugin: presets de fábrica, tamanho da interface (100%, 125% ou 150%, salvo na sessão), versão instalada e dicas de uso.
+
+### Uso dos controles
+
+- **Digitar valores:** clique no valor embaixo de um knob e digite ("3", "-4,5", "60%"). Enter confirma, Esc cancela.
+- **Dicas ao passar o mouse:** cada controle explica o que faz.
+- **ENGAGE desligado:** os knobs Drive e Blend ficam esmaecidos, porque não atuam.
 
 Nos knobs e botões, o clique direito abre o menu da DAW para aquele parâmetro (automação, MIDI learn), quando a DAW oferece um. Senão, abre o menu do plugin. Também dá para digitar valores direto na DAW ("3", "-4.5 dB", "60%").
 

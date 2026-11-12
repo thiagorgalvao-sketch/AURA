@@ -55,6 +55,15 @@ private:
 };
 
 //==============================================================================
+// Botão de menu: três traços discretos, no tom dos textos do painel
+class MenuButton : public juce::Button
+{
+public:
+    MenuButton() : juce::Button ("Menu") { setMouseCursor (juce::MouseCursor::PointingHandCursor); }
+    void paintButton (juce::Graphics&, bool highlighted, bool down) override;
+};
+
+//==============================================================================
 // Visor do afinador: nota, desvio em cents e frequência. Cobre os knobs enquanto ligado.
 class TunerDisplay : public juce::Component
 {
@@ -93,13 +102,16 @@ public:
     float currentScale = 1.0f;
 
     static juce::String formatValue (const juce::String& paramId, float value);
-    void showScaleMenu();
+    void showMainMenu (bool fromButton);
 
 private:
     void timerCallback() override;
     void showCabMenu();
     void chooseIrFile();
     void repaintKnobArea (size_t index);
+    void refreshValue (size_t index);
+    void commitValue (size_t index);
+    void updateDriveDim();
     juce::Rectangle<float> cabIrArea() const;
 
     AuraBassAudioProcessor& processor;
@@ -107,6 +119,9 @@ private:
 
     std::vector<std::unique_ptr<PointerKnob>> knobs;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> knobAttachments;
+
+    std::vector<std::unique_ptr<juce::Label>> valueLabels;   // valores editáveis (clique para digitar)
+    MenuButton menuButton;
 
     HotSpot driveSpot, cabSpot, tunerSpot;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> driveAttachment, cabAttachment, tunerAttachment;
@@ -134,6 +149,7 @@ private:
 
     AuraBassAudioProcessor& processor;
     AuraPanel panel;
+    juce::TooltipWindow tooltips { this, 900 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AuraBassAudioProcessorEditor)
 };

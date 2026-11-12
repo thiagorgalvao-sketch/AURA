@@ -18,6 +18,16 @@ namespace
     const Colour smallLabelColour { 0xff8e939a };
 
     const char* knobTitles[] = { "Level", "Drive", "Low", "Mid", "High", "Presence", "Blend" };
+    const char* knobTips[] = {
+        "Volume de saída",
+        "Ganho antes da saturação (ativo com o ENGAGE ligado)",
+        "Graves (80 Hz)",
+        "Médios (600 Hz)",
+        "Agudos (2,5 kHz)",
+        "Presença e ataque (5 kHz)",
+        "Mistura do som limpo com o saturado (ativo com o ENGAGE ligado)" };
+    const char* knobHint = "\nShift: ajuste fino  |  Duplo clique: valor padrão";
+    constexpr size_t driveKnob = 1, blendKnob = 6;   // dependem do ENGAGE
 }
 
 //==============================================================================
@@ -126,6 +136,15 @@ void HotSpot::mouseUp (const MouseEvent& e)
 }
 
 //==============================================================================
+void MenuButton::paintButton (Graphics& g, bool highlighted, bool down)
+{
+    auto r = getLocalBounds().toFloat().withSizeKeepingCentre (15.0f, 11.0f);
+    g.setColour (down ? Colours::white : (highlighted ? valueColour : smallLabelColour.withAlpha (0.85f)));
+    for (int i = 0; i < 3; ++i)
+        g.fillRoundedRectangle (r.getX(), r.getY() + (float) i * 4.6f, r.getWidth(), 1.8f, 0.9f);
+}
+
+//==============================================================================
 void TunerDisplay::restart()
 {
     hasNote = false;
@@ -192,7 +211,13 @@ void TunerDisplay::paint (Graphics& g)
     g.setFont (small);
     g.setColour (dim);
     g.drawText ("TUNER", header, Justification::centredLeft, false);
-    g.drawText ("A4 = 440 Hz    MUTE", header, Justification::centredRight, false);
+    auto pill = header.removeFromRight (44.0f).withSizeKeepingCentre (44.0f, 15.0f);
+    g.setColour (amber.withAlpha (0.16f));
+    g.fillRoundedRectangle (pill, 7.5f);
+    g.setColour (amber);
+    g.drawText ("MUTE", pill.translated (0.8f, 0.0f), Justification::centred, false);
+    g.setColour (dim);
+    g.drawText ("A4 = 440 Hz", header.withTrimmedRight (10.0f), Justification::centredRight, false);
 
     // Nota
     const float cx = b.getCentreX();
@@ -226,7 +251,10 @@ void TunerDisplay::paint (Graphics& g)
     {
         g.setFont (Font (FontOptions (assets.titleTypeface).withHeight (48.0f)));
         g.setColour (dim.withAlpha (0.6f));
-        g.drawText ("- -", noteArea, Justification::centred, false);
+        g.drawText ("- -", noteArea.translated (0.0f, -8.0f), Justification::centred, false);
+        g.setFont (small);
+        g.setColour (dim);
+        g.drawText ("PLAY A STRING", noteArea.withTop (noteArea.getBottom() - 16.0f), Justification::centred, false);
     }
 
     // Medidor: 41 segmentos de -50 a +50 cents
@@ -277,13 +305,42 @@ AuraPanel::AuraPanel (AuraBassAudioProcessor& p) : processor (p)
         auto* param = processor.apvts.getParameter (k.paramId);
         knob->setDoubleClickReturnValue (true, param->convertFrom0to1 (param->getDefaultValue()));
         knob->textFromValueFunction = [param] (double v) { return param->getText (param->convertTo0to1 ((float) v), 0); };
-        knob->onValueChange = [this, i] { repaintKnobArea (i); };
+        knob->setTooltip (String::fromUTF8 (knobTips[i]) + String::fromUTF8 (knobHint));
+        knob->onValueChange = [this, i] { refreshValue (i); repaintKnobArea (i); };
+
+        // Valor embaixo do knob: clique para digitar
+        auto label = std::make_unique<Label>();
+        label->setFont (assets->valueFont);
+        label->setJustificationType (Justification::centred);
+        label->setColour (Label::textColourId, valueColour);
+        label->setColour (Label::backgroundWhenEditingColourId, Colour (0xff0b0d10));
+        label->setColour (Label::textWhenEditingColourId, Colours::white);
+        label->setColour (Label::outlineWhenEditingColourId, smallLabelColour);
+        label->setColour (TextEditor::highlightColourId, Colour (0xff3a5a80));
+        label->setEditable (true, false, true);
+        label->setMouseCursor (MouseCursor::IBeamCursor);
+        label->setTooltip (String::fromUTF8 ("Clique para digitar um valor"));
+        label->setBounds (Rectangle<float> (78.0f, 20.0f).withCentre ({ k.valueX, L::valueY }).getSmallestIntegerContainer());
+        label->onTextChange = [this, i] { commitValue (i); };
+        addAndMakeVisible (*label);
+        valueLabels.push_back (std::move (label));
         knob->onContextMenu = [this, param] { if (onParameterContextMenu) onParameterContextMenu (*param); };
         knobs.push_back (std::move (knob));
     }
 
+    for (size_t i = 0; i < knobs.size(); ++i)
+        refreshValue (i);
+
     driveSpot.setTitle ("Drive engage");
     cabSpot.setTitle ("Cab");
+    driveSpot.setTooltip (String::fromUTF8 ("Liga e desliga a distorção. O EQ e o CAB continuam ativos"));
+    cabSpot.setTooltip (String::fromUTF8 ("Liga e desliga a simulação de caixa"));
+    tunerSpot.setTooltip (String::fromUTF8 ("Afinador (a saída fica muda enquanto ligado)"));
+
+    menuButton.setTooltip (String::fromUTF8 ("Menu: presets, tamanho da interface e dicas"));
+    menuButton.setBounds (toInt (L::menuButton));
+    menuButton.onClick = [this] { showMainMenu (true); };
+    addAndMakeVisible (menuButton);
     addAndMakeVisible (driveSpot);
     addAndMakeVisible (cabSpot);
     driveSpot.onStateChange = [this] { repaint (square (L::driveSwitchX, L::driveSwitchY, L::driveSwitchDownHalf).getSmallestIntegerContainer()); };
@@ -295,6 +352,7 @@ AuraPanel::AuraPanel (AuraBassAudioProcessor& p) : processor (p)
     tunerAttachment = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment> (processor.apvts, ParamIDs::tuner, tunerSpot);
     addChildComponent (tunerDisplay);
     tunerDisplay.setBounds (toInt (L::tunerDisplay));
+    tunerDisplay.toFront (false);
 
     for (auto [spot, id] : { std::pair<HotSpot*, const char*> { &driveSpot, ParamIDs::driveOn }, { &cabSpot, ParamIDs::cab }, { &tunerSpot, ParamIDs::tuner } })
     {
@@ -317,6 +375,38 @@ String AuraPanel::formatValue (const String& id, float v)
     if (id == ParamIDs::blend) return String (roundToInt (v)) + "%";
     if (std::abs (v) < 0.05f) v = 0.0f;
     return String (v, 1) + " dB";
+}
+
+void AuraPanel::refreshValue (size_t index)
+{
+    if (index < valueLabels.size() && ! valueLabels[index]->isBeingEdited())
+        valueLabels[index]->setText (formatValue (L::knobs[index].paramId, (float) knobs[index]->getValue()), dontSendNotification);
+}
+
+void AuraPanel::commitValue (size_t index)
+{
+    // Aceita "3", "-4,5", "60%", "+2 dB"; texto sem número mantém o valor atual
+    const auto digits = valueLabels[index]->getText().retainCharacters ("0123456789.,-+").replaceCharacter (',', '.');
+    if (digits.containsAnyOf ("0123456789"))
+        if (auto* param = processor.apvts.getParameter (L::knobs[index].paramId))
+        {
+            const auto range = param->getNormalisableRange();
+            const float v = range.snapToLegalValue (jlimit (range.start, range.end, digits.getFloatValue()));
+            param->beginChangeGesture();
+            param->setValueNotifyingHost (range.convertTo0to1 (v));
+            param->endChangeGesture();
+        }
+    refreshValue (index);
+}
+
+void AuraPanel::updateDriveDim()
+{
+    // Com o ENGAGE desligado, Drive e Blend não atuam: ficam esmaecidos
+    for (size_t i : { driveKnob, blendKnob })
+    {
+        valueLabels[i]->setColour (Label::textColourId, driveOn ? valueColour : smallLabelColour.withAlpha (0.55f));
+        repaintKnobArea (i);
+    }
 }
 
 void AuraPanel::repaintKnobArea (size_t index)
@@ -348,6 +438,7 @@ void AuraPanel::timerCallback()
     {
         driveOn = d;
         repaint (square (L::driveLedX, L::driveLedY, L::driveLedHalf).getSmallestIntegerContainer());
+        updateDriveDim();
     }
     if (c != cabOn || irVersion != cabIrVersion)
     {
@@ -373,6 +464,7 @@ void AuraPanel::paint (Graphics& g)
         const float r = L::arcLitRadius;
         const auto area = Rectangle<float> (k.cx - r, k.cy + L::arcCentreDy - r, 2 * r, 2 * r);
         if (! clip.intersects (area)) continue;
+        if (! driveOn && (i == driveKnob || i == blendKnob)) continue;
 
         const float norm = (float) knobs[i]->valueToProportionOfLength (knobs[i]->getValue());
         const float end = degreesToRadians (-L::arcMaxDeg + norm * 2.0f * L::arcMaxDeg);
@@ -405,19 +497,22 @@ void AuraPanel::paint (Graphics& g)
 
 void AuraPanel::paintOverChildren (Graphics& g)
 {
-    if (tunerOn) return;   // o visor do afinador cobre os valores
+    if (tunerOn) return;   // o visor do afinador cobre os knobs
 
     const auto& font = assets->valueFont;
     g.setFont (font);
 
-    // Valores ao vivo embaixo de cada knob
-    g.setColour (valueColour);
-    for (size_t i = 0; i < knobs.size(); ++i)
-    {
-        const auto& k = L::knobs[i];
-        g.drawText (formatValue (k.paramId, (float) knobs[i]->getValue()),
-                    Rectangle<float> (110.0f, 20.0f).withCentre ({ k.valueX, L::valueY }), Justification::centred, false);
-    }
+    // ENGAGE desligado: sombra suave sobre os knobs Drive e Blend
+    if (! driveOn)
+        for (size_t i : { driveKnob, blendKnob })
+        {
+            const auto& k = L::knobs[i];
+            const float r = 43.0f;
+            ColourGradient shade (Colours::black.withAlpha (0.42f), k.cx, k.cy + 2.0f, Colours::transparentBlack, k.cx + r, k.cy + 2.0f, true);
+            shade.addColour (0.80, Colours::black.withAlpha (0.42f));
+            g.setGradientFill (shade);
+            g.fillEllipse (k.cx - r, k.cy + 2.0f - r, 2 * r, 2 * r);
+        }
 
     // Seletor da IR do CAB: na mesma linha e no mesmo tamanho dos valores, com a seta colada
     const auto name = cabIrName.length() > 7 ? cabIrName.substring (0, 6) + String::fromUTF8 ("…") : cabIrName;
@@ -441,7 +536,7 @@ void AuraPanel::mouseMove (const MouseEvent& e)
 void AuraPanel::mouseDown (const MouseEvent& e)
 {
     if (! tunerOn && cabIrArea().contains (e.position)) { showCabMenu(); return; }
-    if (e.mods.isPopupMenu()) { showScaleMenu(); return; }   // clique direito: tamanho da interface
+    if (e.mods.isPopupMenu()) { showMainMenu (false); return; }   // clique direito: menu do plugin
 }
 
 void AuraPanel::showCabMenu()
@@ -494,19 +589,39 @@ void AuraPanel::chooseIrFile()
     });
 }
 
-void AuraPanel::showScaleMenu()
+void AuraPanel::showMainMenu (bool fromButton)
 {
     PopupMenu m;
     m.addSectionHeader ("AURA Bass " + String (JucePlugin_VersionString));
-    m.addSeparator();
-    m.addSectionHeader ("Tamanho da interface");
+
+    PopupMenu presets;
+    for (int i = 0; i < processor.getNumPrograms(); ++i)
+        presets.addItem (100 + i, processor.getProgramName (i));
+    m.addSubMenu ("Presets", presets);
+
+    PopupMenu size;
     const float scales[] = { 1.0f, 1.25f, 1.5f };
     for (int i = 0; i < 3; ++i)
-        m.addItem (1 + i, String (roundToInt (scales[i] * 100.0f)) + "%", true, std::abs (scales[i] - currentScale) < 0.01f);
-    m.showMenuAsync (PopupMenu::Options().withTargetComponent (this),
-                     [safe = SafePointer<AuraPanel> (this), scales] (int r)
+        size.addItem (1 + i, String (roundToInt (scales[i] * 100.0f)) + "%", true, std::abs (scales[i] - currentScale) < 0.01f);
+    m.addSubMenu ("Tamanho da interface", size);
+
+    m.addSeparator();
+    m.addSectionHeader ("Dicas");
+    for (auto tip : { "Shift + arrastar: ajuste fino",
+                      "Duplo clique no knob: valor padrão",
+                      "Clique no valor: digitar",
+                      "Clique no nome da caixa (4x10): trocar a IR",
+                      "TUNER: afinador (saída muda)" })
+        m.addItem (-1, String::fromUTF8 (tip), false);
+
+    auto options = PopupMenu::Options().withTargetComponent (fromButton ? static_cast<Component*> (&menuButton) : this);
+    if (! fromButton) options = options.withMousePosition();
+    m.showMenuAsync (options, [safe = SafePointer<AuraPanel> (this), scales] (int r)
     {
-        if (safe != nullptr && r >= 1 && r <= 3 && safe->onScaleChosen)
+        if (safe == nullptr) return;
+        if (r >= 100)
+            safe->processor.setCurrentProgram (r - 100);
+        else if (r >= 1 && r <= 3 && safe->onScaleChosen)
             safe->onScaleChosen (scales[r - 1]);
     });
 }
@@ -545,7 +660,7 @@ void AuraBassAudioProcessorEditor::showHostMenu (RangedAudioParameter& param)
             return;
         }
     // DAW sem menu de parâmetro (ex.: AU no Logic): mostra o menu do próprio plugin
-    panel.showScaleMenu();
+    panel.showMainMenu (false);
 }
 
 void AuraBassAudioProcessorEditor::setScale (float scale)

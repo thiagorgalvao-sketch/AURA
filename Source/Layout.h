@@ -41,6 +41,9 @@ namespace AuraLayout
     // Visor do afinador (cobre os knobs enquanto o afinador está ligado)
     inline constexpr Rect tunerDisplay { 30.0f, 98.0f, 666.0f, 156.0f };
 
+    // Botão de menu (presets, tamanho da interface, dicas), no canto superior direito
+    inline constexpr Rect menuButton { 662.0f, 40.0f, 26.0f, 22.0f };
+
     // CAB (rótulo, LED laranja e chave alavanca)
     inline constexpr float cabLedX = 671.35f, cabLedY = 138.65f;
     inline constexpr float cabToggleX = 671.5f, cabToggleY = 175.0f;
