@@ -13,7 +13,7 @@ dos plugins** e **os valores dos parâmetros** (gravados como números de 32 bit
 |---|---|
 | **COLORINDO** (clean) | Console EQ → Compressor → Channel EQ → Bass Amp |
 | **CAIXA SUJA** (drive 1) | … → Bass Amp → **Clip Distortion** |
-| **RAT** (drive 2) | … → Bass Amp → **Pedalboard** (3 blocos) → Channel EQ |
+| **FUZZ** (drive 2) | … → Bass Amp → **Pedalboard** (3 blocos) → Channel EQ |
 | **OCTAVIO SUB** | … → Bass Amp → **Pitch Shifter** → Channel EQ |
 | **MACRO SYNTH** | … → Bass Amp → **Noise Gate** → **Pitch Shifter** → **Pedalboard** |
 | **CHORUS** | … → Bass Amp → **Clip Distortion** → **Chorus** |
@@ -21,7 +21,7 @@ dos plugins** e **os valores dos parâmetros** (gravados como números de 32 bit
 | **SYNTH MOOG** | Console EQ (*Synth Bass*) → Compressor |
 
 No app, dois presets aparecem com nome mais curto do que no arquivo:
-**RAT** é o `RATO DO PORÃO - DRIVE ESTÁGIO 2.patch` e **CHORUS** é o
+**FUZZ** é o `RATO DO PORÃO - DRIVE ESTÁGIO 2.patch` e **CHORUS** é o
 `CHORA.patch`.
 
 Os presets de fábrica usados: `CONSOLE VINTAGE`, `COMPRESSOR LEGAL BLOOM`,
@@ -74,7 +74,7 @@ O Logic não roda no navegador, então cada plugin virou um bloco equivalente:
 | Channel EQ | passa-altas + cinco bandas, com as frequências e ganhos da tabela |
 | Bass Amp Designer | pré-amp com saturação assimétrica (4× oversampling), tone stack e a resposta de impulso de caixa 4×10 do AURA Bass |
 | Clip Distortion | corte duro com ponto deslocado pela simetria, tone e nível |
-| Pedalboard (RAT) | distorção com corte duro, tone e mistura |
+| Pedalboard (FUZZ) | distorção com corte duro, tone e mistura |
 | Pitch Shifter −12 | divisor de oitava analógico (comparador com histerese + envelope), como nos pedais de sub |
 | Chorus | atraso modulado |
 | Noise Gate | gate com ataque rápido e release ajustável |

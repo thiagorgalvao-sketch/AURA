@@ -85,7 +85,7 @@ const PRESETS = [
   },
   {
     id: 'rato',
-    nome: 'RAT',
+    nome: 'FUZZ',
     sub: 'drive 2',
     cor: '#8c2f2f',
     cadeia: ['consoleEq', 'comp', 'eq', 'amp', 'fuzz', 'eq2'],
@@ -104,7 +104,7 @@ const PRESETS = [
   {
     id: 'macro',
     nome: 'MACRO SYNTH',
-    sub: 'oitava + RAT',
+    sub: 'oitava + fuzz',
     cor: '#3f7d4f',
     cadeia: ['consoleEq', 'comp', 'eq', 'amp', 'gate', 'sub', 'fuzz'],
     eq: EQ_BASE,
@@ -181,7 +181,7 @@ const PEDAIS = {
     ],
   },
   fuzz: {
-    nome: 'RAT', sub: 'distorção', cor: '#7a2626',
+    nome: 'FUZZ', sub: 'fuzz', cor: '#7a2626',
     knobs: [
       { id: 'drive', rot: 'DRIVE', min: 0,   max: 100,  passo: 1,   un: '' },
       { id: 'tone',  rot: 'TONE',  min: 300, max: 6000, passo: 10,  un: 'Hz' },
