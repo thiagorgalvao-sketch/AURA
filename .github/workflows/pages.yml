@@ -38,10 +38,10 @@ jobs:
       - name: Montar o site
         run: bash Tools/build-web.sh site
 
-      - name: Ligar o GitHub Pages
+      # Exige que o Pages esteja ligado em Settings > Pages com a origem
+      # "GitHub Actions" (o token do Actions não tem permissão para ligar).
+      - name: Conferir o GitHub Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

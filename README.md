@@ -119,9 +119,12 @@ python3 Tests/web-ui-test.py      # abre num Chromium e testa a interface
 ```
 
 O workflow `.github/workflows/pages.yml` faz isso a cada push em `main` que
-mexa em `web/`, nos recursos ou no layout, e publica o resultado. Se for a
-primeira publicação, confira em **Settings > Pages** que a origem está como
-**GitHub Actions**.
+mexa em `web/`, nos recursos ou no layout, e publica o resultado.
+
+**Antes da primeira publicação**, ligue o Pages uma vez: em **Settings > Pages**,
+no campo *Source*, escolha **GitHub Actions**. O token do Actions não tem
+permissão para ligar isso sozinho. Depois, em **Actions > Versão navegador
+(GitHub Pages)**, clique em *Run workflow*.
 
 ## MacBook: jeito mais fácil
 
