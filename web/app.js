@@ -74,6 +74,8 @@ const state = {
   customIr: null,          // { name, buffer }
   channel: 0,              // 0 = esquerda/mono, 1 = direita, 2 = soma
   inputDeviceId: '',
+  outputDeviceId: '',
+  inputLabel: '',       // só para mostrar qual entrada está em uso
   pressed: null,           // 'drive' | 'tuner' (footswitch afundado)
   running: false,
 };
@@ -123,6 +125,7 @@ function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       params: state.params, driveOn: state.driveOn, cab: state.cab,
       irIndex: state.irIndex, channel: state.channel, inputDeviceId: state.inputDeviceId,
+      outputDeviceId: state.outputDeviceId,
     }));
   } catch (e) { /* modo privado: segue sem salvar */ }
 }
@@ -143,6 +146,7 @@ function loadState() {
     if (saved.irIndex === 0 || saved.irIndex === 1) { state.irIndex = saved.irIndex; state.irName = BUILTIN_IRS[saved.irIndex].name; }
     if ([0, 1, 2].includes(saved.channel)) state.channel = saved.channel;
     if (typeof saved.inputDeviceId === 'string') state.inputDeviceId = saved.inputDeviceId;
+    if (typeof saved.outputDeviceId === 'string') state.outputDeviceId = saved.outputDeviceId;
   } catch (e) { /* ignora estado inválido */ }
 }
 
@@ -258,8 +262,11 @@ async function start() {
     startOverlay.classList.add('hidden');
     paint();
 
+    state.inputLabel = nomeDaEntrada(stream);
+    await aplicaSaida(state.outputDeviceId);
+
     const latency = Math.round(((ctxAudio.baseLatency || 0) + (ctxAudio.outputLatency || 0)) * 1000);
-    if (latency > 0) toast(`Pronto. Latência de saída: cerca de ${latency} ms.`, 4200);
+    toast(`Entrando por: ${state.inputLabel || 'entrada padrão'}${latency > 0 ? ` · ${latency} ms` : ''}`, 5200);
 
     ctxAudio.onstatechange = () => { if (ctxAudio.state === 'suspended') ctxAudio.resume().catch(() => {}); };
     stream.getAudioTracks().forEach((t) => {
@@ -273,6 +280,60 @@ async function start() {
       : name === 'NotFoundError' ? 'Nenhuma entrada de áudio encontrada. Ligue a interface ou o adaptador e tente de novo.'
       : (err && err.message) || 'Não consegui iniciar o áudio.';
   }
+}
+
+/** Nome legível da entrada que o navegador realmente abriu. */
+function nomeDaEntrada(stream) {
+  const t = stream && stream.getAudioTracks && stream.getAudioTracks()[0];
+  return t ? (t.label || '') : '';
+}
+
+/** Troca a entrada sem recarregar a página: abre a nova e religa o grafo. */
+async function trocaEntrada(deviceId) {
+  if (!audio) { state.inputDeviceId = deviceId; saveState(); return; }
+  const anterior = audio.stream;
+  try {
+    const novo = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+        channelCount: { ideal: 2 },
+        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+      },
+      video: false,
+    });
+    try { audio.source.disconnect(); } catch (e) { /* já solto */ }
+    audio.source = audio.ctx.createMediaStreamSource(novo);
+    audio.source.connect(audio.worklet);
+    audio.stream = novo;
+    anterior.getTracks().forEach((t) => t.stop());
+    novo.getAudioTracks().forEach((t) => {
+      t.onended = () => toast('A entrada de áudio foi desconectada.', 6000);
+    });
+    state.inputDeviceId = deviceId;
+    state.inputLabel = nomeDaEntrada(novo);
+    saveState();
+    toast(`Entrando por: ${state.inputLabel || 'entrada padrão'}`, 4000);
+  } catch (err) {
+    toast('Não consegui abrir essa entrada: ' + ((err && err.message) || err), 6000);
+  }
+}
+
+/** Manda o som para outra saída (interface, fone), quando o navegador deixa. */
+async function aplicaSaida(deviceId) {
+  if (!audio || !deviceId) return true;
+  if (typeof audio.ctx.setSinkId !== 'function') return false;
+  try { await audio.ctx.setSinkId(deviceId); return true; }
+  catch (e) { return false; }
+}
+
+async function trocaSaida(deviceId) {
+  state.outputDeviceId = deviceId;
+  saveState();
+  const ok = await aplicaSaida(deviceId);
+  if (!ok && deviceId)
+    toast('Este navegador não deixa escolher a saída. Troque o dispositivo padrão no sistema.', 6000);
+  else if (ok)
+    toast('Saída trocada.', 3000);
 }
 
 // ---------------------------------------------------------------------------
@@ -796,26 +857,50 @@ async function openMenu(ev, section) {
     L.presets.forEach((p) => menuEl.appendChild(menuItem(p.name, () => applyPreset(p))));
 
     menuEl.appendChild(document.createElement('hr'));
-    menuEl.appendChild(menuHeader('Entrada de áudio'));
-    const select = document.createElement('select');
-    select.innerHTML = '<option value="">Padrão do sistema</option>';
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      devices.filter((d) => d.kind === 'audioinput').forEach((d, i) => {
+    let dispositivos = [];
+    try { dispositivos = await navigator.mediaDevices.enumerateDevices(); } catch (e) { /* sem permissão ainda */ }
+
+    const seletor = (tipo, atual, rotulo, aoTrocar) => {
+      const sel = document.createElement('select');
+      const padrao = document.createElement('option');
+      padrao.value = ''; padrao.textContent = 'Padrão do sistema';
+      sel.appendChild(padrao);
+      dispositivos.filter((d) => d.kind === tipo).forEach((d, i) => {
         const o = document.createElement('option');
         o.value = d.deviceId;
-        o.textContent = d.label || `Entrada ${i + 1}`;
-        if (d.deviceId === state.inputDeviceId) o.selected = true;
-        select.appendChild(o);
+        o.textContent = d.label || `${rotulo} ${i + 1}`;
+        if (d.deviceId === atual) o.selected = true;
+        sel.appendChild(o);
       });
-    } catch (e) { /* sem permissão ainda */ }
-    select.onchange = () => {
-      state.inputDeviceId = select.value;
-      saveState();
-      closeMenu();
-      toast('Recarregue a página para usar a nova entrada.', 4000);
+      sel.onchange = () => { aoTrocar(sel.value); closeMenu(); };
+      return sel;
     };
-    menuEl.appendChild(select);
+
+    menuEl.appendChild(menuHeader('Entrada de áudio'));
+    menuEl.appendChild(seletor('audioinput', state.inputDeviceId, 'Entrada', trocaEntrada));
+    if (state.inputLabel) {
+      const atual = document.createElement('div');
+      atual.className = 'tip';
+      atual.textContent = 'Em uso: ' + state.inputLabel;
+      menuEl.appendChild(atual);
+    }
+    if (!dispositivos.some((d) => d.kind === 'audioinput' && d.label)) {
+      const dica = document.createElement('div');
+      dica.className = 'tip';
+      dica.textContent = 'Ligue o áudio para ver os nomes das entradas.';
+      menuEl.appendChild(dica);
+    }
+
+    menuEl.appendChild(menuHeader('Saída de áudio'));
+    if (audio && typeof audio.ctx.setSinkId === 'function') {
+      menuEl.appendChild(seletor('audiooutput', state.outputDeviceId, 'Saída', trocaSaida));
+    } else {
+      const dica = document.createElement('div');
+      dica.className = 'tip';
+      dica.textContent = audio ? 'Este navegador manda o som para a saída padrão do sistema.'
+                               : 'Ligue o áudio para escolher a saída.';
+      menuEl.appendChild(dica);
+    }
 
     const channels = ['Canal 1 (esquerda)', 'Canal 2 (direita)', 'Somar os dois'];
     channels.forEach((label, i) => menuEl.appendChild(menuItem(label, () => {

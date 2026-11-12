@@ -198,6 +198,15 @@ def main():
         page.click("#botaoMenu")
         page.wait_for_timeout(200)
         check(not page.evaluate("() => document.getElementById('menu').hidden"), "menu abre")
+        page.wait_for_timeout(900)
+        sels = page.eval_on_selector_all(
+            "#menu select",
+            "els => els.map(e => [...e.options].map(o => o.textContent))")
+        print(f"   seletores de dispositivo: {len(sels)}")
+        for lista in sels:
+            print("     " + ", ".join(lista))
+        check(len(sels) == 2, "menu traz entrada e saída de áudio")
+        check(any(len(l) > 1 for l in sels), "os dispositivos do sistema aparecem na lista")
         page.keyboard.press("Escape")
         page.evaluate("(id) => window.__pb.aplicaPreset(id)", "chora")
         page.wait_for_timeout(300)

@@ -156,6 +156,11 @@ html, body {
 #menu button:hover { background: #20242c; }
 #menu .dica { padding: 3px 10px; font-size: 11.5px; color: var(--apagado); }
 #menu hr { border: 0; border-top: 1px solid var(--linha); margin: 6px 4px; }
+#menu select {
+  width: calc(100% - 16px); margin: 3px 8px 7px; padding: 8px;
+  background: #0f1116; color: var(--texto);
+  border: 1px solid var(--linha); border-radius: 7px; font: inherit;
+}
 
 #aviso {
   position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 70;

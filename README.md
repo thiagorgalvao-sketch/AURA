@@ -98,8 +98,11 @@ Abra o endereço, toque em **Ligar** e autorize o microfone (ou a interface de
 
 - **Ligue no fone de ouvido.** Sem fone, o som da caixa volta para o microfone
   e microfona.
-- **Interface de áudio:** ligue o baixo na interface e escolha-a como entrada do
-  navegador. Pelo microfone do celular também funciona, mas com menos graves.
+- **Interface de áudio:** ligue o baixo na interface e, no menu (≡), escolha-a
+  em **Entrada de áudio** e em **Saída de áudio**. A troca vale na hora, sem
+  recarregar. Ao ligar, o aviso na tela diz por qual entrada o som está entrando
+  — se aparecer o microfone do computador, é só trocar ali. Pelo microfone do
+  celular também funciona, mas com menos graves.
 - **Instalar como app:** no Chrome, menu > *Instalar aplicativo*; no iPhone,
   *Compartilhar > Adicionar à Tela de Início*. Depois de instalado, abre sem
   internet e sem a barra do navegador.

@@ -26,6 +26,9 @@ const estado = {
   preset: 'colorindo',
   pedais: {},          // id -> { on, params: {} }
   volume: 0,           // dB
+  entradaId: '',       // dispositivo de entrada escolhido
+  saidaId: '',         // dispositivo de saída escolhido
+  entradaNome: '',     // só para mostrar qual entrada está em uso
 };
 
 // ---- Estado inicial a partir dos padrões lidos do MainStage ---------------
@@ -249,6 +252,50 @@ window.addEventListener('keydown', (ev) => {
 
 function fechaMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; }
 
+/** Lista de entradas e saídas, aplicando a escolha na hora. */
+async function montaDispositivos() {
+  const marca = document.createElement('div');
+  marca.className = 'dica';
+  marca.textContent = 'Procurando dispositivos...';
+  menuEl.appendChild(marca);
+
+  let lista = [];
+  try { lista = await navigator.mediaDevices.enumerateDevices(); } catch (e) { /* sem permissão */ }
+  if (menuEl.hidden) return;
+  marca.remove();
+
+  const seletor = (tipo, atual, rotulo, aoTrocar) => {
+    const sel = document.createElement('select');
+    const padrao = document.createElement('option');
+    padrao.value = ''; padrao.textContent = 'Padrão do sistema';
+    sel.appendChild(padrao);
+    lista.filter((d) => d.kind === tipo).forEach((d, i) => {
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label || `${rotulo} ${i + 1}`;
+      if (d.deviceId === atual) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => { aoTrocar(sel.value); fechaMenu(); };
+    return sel;
+  };
+
+  const dica = (t) => { const e = document.createElement('div'); e.className = 'dica'; e.textContent = t; menuEl.appendChild(e); };
+
+  const ref = menuEl.querySelector('#ancoraPresets');
+  const poe = (el) => ref ? menuEl.insertBefore(el, ref) : menuEl.appendChild(el);
+
+  poe(seletor('audioinput', estado.entradaId, 'Entrada', trocaEntrada));
+  if (estado.entradaNome) { const e = document.createElement('div'); e.className = 'dica'; e.textContent = 'Em uso: ' + estado.entradaNome; poe(e); }
+  if (ctx && typeof ctx.setSinkId === 'function') {
+    poe(seletor('audiooutput', estado.saidaId, 'Saída', trocaSaida));
+  } else {
+    const e = document.createElement('div'); e.className = 'dica';
+    e.textContent = ctx ? 'Este navegador usa a saída padrão do sistema.' : 'Ligue o áudio para escolher os dispositivos.';
+    poe(e);
+  }
+}
+
 function abreMenu() {
   menuEl.innerHTML = '';
   const h = (t) => { const e = document.createElement('h3'); e.textContent = t; menuEl.appendChild(e); };
@@ -263,6 +310,12 @@ function abreMenu() {
   });
 
   menuEl.appendChild(document.createElement('hr'));
+  h('Entrada e saída');
+  montaDispositivos();
+
+  const ancora = document.createElement('hr');
+  ancora.id = 'ancoraPresets';
+  menuEl.appendChild(ancora);
   h('Presets');
   b('Voltar o preset aos valores originais', () => aplicaPreset(estado.preset));
   b('Ligar todos os pedais', () => { ORDEM_PEDAIS.forEach((p) => { estado.pedais[p].on = true; }); mandaTudo(); desenha(); salva(); });
@@ -307,6 +360,8 @@ function carrega() {
     if (!s || !s.pedais) return false;
     estado.preset = s.preset || estado.preset;
     estado.volume = typeof s.volume === 'number' ? s.volume : 0;
+    if (typeof s.entradaId === 'string') estado.entradaId = s.entradaId;
+    if (typeof s.saidaId === 'string') estado.saidaId = s.saidaId;
     for (const pid of ORDEM_PEDAIS) {
       if (!s.pedais[pid]) continue;
       estado.pedais[pid].on = !!s.pedais[pid].on;
@@ -333,12 +388,7 @@ async function carregaIR(c) {
 }
 
 async function liga() {
-  const entrada = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      echoCancellation: false, noiseSuppression: false, autoGainControl: false,
-      channelCount: 1, latency: 0,
-    },
-  });
+  const entrada = await navigator.mediaDevices.getUserMedia(restricoes(estado.entradaId));
 
   ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
   await ctx.audioWorklet.addModule('pb-processor.js');
@@ -359,10 +409,62 @@ async function liga() {
   aplicaPreset(estado.preset, { manterAjustes: true });
   mandaTudo();
 
+  estado.entradaNome = nomeDaEntrada(entrada);
+  await aplicaSaida(estado.saidaId);
+
   $('#inicio').hidden = true;
   const atraso = Math.round((ctx.baseLatency + (ctx.outputLatency || 0)) * 1000);
-  mostra(`Pronto${ir ? '' : ' (sem a resposta de alto-falante)'}. Latência: cerca de ${atraso} ms.`);
+  mostra(`Entrando por: ${estado.entradaNome || 'entrada padrão'} · ${atraso} ms`
+       + `${ir ? '' : ' · sem a resposta de alto-falante'}`, 5200);
   medeEntrada();
+}
+
+function restricoes(id) {
+  return {
+    audio: {
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+      channelCount: 1, latency: 0,
+      ...(id ? { deviceId: { exact: id } } : {}),
+    },
+  };
+}
+
+function nomeDaEntrada(stream) {
+  const t = stream && stream.getAudioTracks && stream.getAudioTracks()[0];
+  return t ? (t.label || '') : '';
+}
+
+/** Troca a entrada sem recarregar: abre a nova e religa o grafo. */
+async function trocaEntrada(id) {
+  if (!ctx) { estado.entradaId = id; salva(); return; }
+  try {
+    const novo = await navigator.mediaDevices.getUserMedia(restricoes(id));
+    const velho = fonte && fonte.mediaStream;
+    try { fonte.disconnect(); } catch (e) { /* já solto */ }
+    fonte = ctx.createMediaStreamSource(novo);
+    fonte.connect(rig.entrada);
+    if (analisador) fonte.connect(analisador);
+    if (velho) velho.getTracks().forEach((t) => t.stop());
+    estado.entradaId = id;
+    estado.entradaNome = nomeDaEntrada(novo);
+    salva();
+    mostra('Entrando por: ' + (estado.entradaNome || 'entrada padrão'));
+  } catch (e) {
+    mostra('Não consegui abrir essa entrada: ' + ((e && e.message) || e), 6000);
+  }
+}
+
+async function aplicaSaida(id) {
+  if (!ctx || !id || typeof ctx.setSinkId !== 'function') return !id;
+  try { await ctx.setSinkId(id); return true; } catch (e) { return false; }
+}
+
+async function trocaSaida(id) {
+  estado.saidaId = id;
+  salva();
+  const ok = await aplicaSaida(id);
+  if (!ok && id) mostra('Este navegador não deixa escolher a saída. Troque o padrão no sistema.', 6000);
+  else if (ok) mostra('Saída trocada.');
 }
 
 function medeEntrada() {

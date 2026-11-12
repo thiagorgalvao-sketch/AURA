@@ -186,6 +186,14 @@ def main():
         page.wait_for_timeout(500)
         check(page.is_visible("#menu"), "menu abre")
         check(page.locator("#menu button", has_text="Drive pesado").count() == 1, "presets no menu")
+        sels = page.eval_on_selector_all(
+            "#menu select",
+            "els => els.map(e => [...e.options].map(o => o.textContent))")
+        print(f"   seletores de dispositivo: {len(sels)}")
+        for lista in sels:
+            print("     " + ", ".join(lista))
+        check(len(sels) == 2, "menu traz entrada e saída de áudio")
+        check(any(len(l) > 1 for l in sels), "os dispositivos do sistema aparecem na lista")
         page.screenshot(path=f"{OUT}/5-menu.png")
         page.locator("#menu button", has_text="Drive pesado").click()
         page.wait_for_timeout(400)
