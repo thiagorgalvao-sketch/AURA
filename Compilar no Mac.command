@@ -59,6 +59,7 @@ cp -R "$ART/Standalone/AURA Bass.app" "$HOME/Applications/"
 xattr -dr com.apple.quarantine "$VST3_DIR/AURA Bass.vst3" "$AU_DIR/AURA Bass.component" "$HOME/Applications/AURA Bass.app" 2>/dev/null || true
 
 # Faz o macOS reler a lista de Audio Units (Logic, GarageBand etc.)
+rm -rf "$HOME/Library/Caches/AudioUnitCache" 2>/dev/null || true
 killall -9 AudioComponentRegistrar >/dev/null 2>&1 || true
 
 echo ""

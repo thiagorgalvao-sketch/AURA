@@ -15,10 +15,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configurar
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DAURA_BUILD_TESTS=ON -DAURA_BUILD_NUMBER=${{ github.run_number }}
 
       - name: Compilar
         run: cmake --build build --config Release --parallel
+
+      - name: Testar o áudio
+        run: ./build/AuraDSPTest_artefacts/Release/AuraDSPTest
 
       - name: Montar pacote
         run: |
@@ -56,10 +59,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION=$(grep -m1 "CMAKE_PROJECT_VERSION:" build/CMakeCache.txt | cut -d= -f2)
           gh release delete latest --yes --cleanup-tag 2>/dev/null || true
           gh release create latest dist/AuraBass-Mac.zip \
-            --title "AURA Bass — versão mais recente" \
-            --notes "Baixe AuraBass-Mac.zip, descompacte e rode no Terminal: bash (espaço) + arraste 'Instalar no Mac.command' + Enter." \
+            --title "AURA Bass $VERSION" \
+            --notes "Versão $VERSION. Baixe AuraBass-Mac.zip, descompacte e rode no Terminal: bash (espaço) + arraste 'Instalar no Mac.command' + Enter. A versão instalada aparece no clique direito sobre o painel." \
             --target "${{ github.sha }}"
 
   windows:
@@ -69,10 +73,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configurar
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DAURA_BUILD_TESTS=ON -DAURA_BUILD_NUMBER=${{ github.run_number }}
 
       - name: Compilar
         run: cmake --build build --config Release --parallel
+
+      - name: Testar o áudio
+        run: build/AuraDSPTest_artefacts/Release/AuraDSPTest.exe
 
       - name: Enviar
         uses: actions/upload-artifact@v4

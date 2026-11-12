@@ -32,20 +32,32 @@ Toda IR é ajustada para 0 dB na faixa de 100 a 800 Hz, então ligar o CAB muda 
 
 No menu de presets da DAW: **AURA (padrão)**, **Clean DI**, **Grit leve**, **Drive pesado** e **Slap brilhante**.
 
-### Tamanho da interface
+### Tamanho da interface e versão
 
-Clique com o botão direito em qualquer parte vazia do painel para escolher 100%, 125% ou 150%. O tamanho fica salvo na sessão.
-Gera **VST3** e **Standalone** no Windows e no Mac, e **AU** no Mac. AAX: veja abaixo.
+Clique com o botão direito em qualquer parte vazia do painel para escolher 100%, 125% ou 150%. O mesmo menu mostra a versão instalada. O tamanho fica salvo na sessão.
+
+Nos knobs e botões, o clique direito abre o menu da DAW para aquele parâmetro (automação, MIDI learn), quando a DAW oferece um. Senão, abre o menu do plugin. Também dá para digitar valores direto na DAW ("3", "-4.5 dB", "60%").
+
+### Detalhes técnicos
+
+- **Versão automática:** cada build do GitHub gera uma versão nova (1.x.y), o que faz o macOS e o Logic reconhecerem o plugin atualizado.
+- **Tempo real:** o processamento não aloca memória nem lê arquivos. Blocos maiores que o anunciado pela DAW são processados em pedaços.
+- **Bypass da DAW:** atrasa o sinal pela mesma latência do plugin (61 amostras do oversampling), mantendo o alinhamento com as outras faixas.
+- **Cauda (tail):** o plugin informa a duração da IR do CAB à DAW, que não corta o fim do som ao parar.
+- **Economia de CPU:** com o DRIVE desligado, a saturação não é processada; com o CAB desligado, a convolução não é processada. Ao religar, não há estalo.
+- **EQ:** os ganhos são suavizados (sem "zipper" ao girar ou automatizar).
+- **Canais:** entrada mono com saída estéreo é suportada (faixa de baixo mono).
+- **Filtro de entrada:** fica em 18 Hz, abaixo do Si grave de um baixo de 5 cordas.
 
 ## Fluxo do sinal
 
 ```
-entrada → HPF 25 Hz → pré-ênfase (+6 dB @ 800 Hz)
-        → [oversampling 4x] → Drive (0 a +40 dB) → soft clip assimétrico (tanh) → [downsample]
-        → remove DC + LPF 7 kHz (anti-fizz)
-        → BLEND (sinal limpo, atrasado para alinhar, × saturado; footswitch DRIVE desligado = só o limpo)
+entrada → HPF 18 Hz → pré-ênfase (+6 dB @ 800 Hz)
+        → [oversampling 4x] → Drive (+5 a +35 dB; knob de −15 a +15 dB) → soft clip assimétrico (tanh) → [downsample]
+        → remove DC + LPF 7 kHz (anti-fizz) → compensação automática de volume
+        → BLEND (sinal limpo, atrasado para alinhar, × saturado; footswitch ENGAGE desligado = só o limpo)
         → LOW (shelf 80 Hz) → MID (pico 600 Hz) → HIGH (shelf 2,5 kHz) → PRESENCE (pico 5 kHz)
-        → CAB (HPF 45 Hz, +3 dB @ 110 Hz, −3 dB @ 1,8 kHz, LPF 4,5 kHz 24 dB/oct)
+        → CAB (convolução com IR: 4x10, 1x15 ou arquivo do usuário)
         → LEVEL
 ```
 
@@ -123,7 +135,18 @@ cmake --build build --config Release
 ./build/AuraDSPTest_artefacts/Release/AuraDSPTest
 ```
 
-O teste mede nível e THD em vários valores de Drive. Também verifica NaN/Inf, o alinhamento do Blend, o footswitch DRIVE (sinal limpo, EQ ativo, troca sem estalo), o corte de agudos do Cab e o modo mono. Com `AURA_SNAPSHOT=ui.png`, ele salva uma imagem da interface.
+O teste mede nível e THD em vários valores de Drive. Também verifica:
+- NaN/Inf e o alinhamento do Blend;
+- o footswitch (sinal limpo, EQ ativo, troca sem estalo) e a compensação de volume;
+- as IRs do CAB e os presets;
+- o estado salvo, incluindo o preset atual;
+- blocos de qualquer tamanho e o bypass alinhado;
+- a cauda informada à DAW e silêncio na entrada;
+- 44,1, 96 e 192 kHz;
+- mono e mono→estéreo;
+- religar o DRIVE e o CAB sem estalo e o EQ sem zipper.
+
+O GitHub roda esses testes em todo build, e a versão só é publicada se todos passarem. Com `AURA_SNAPSHOT=ui.png`, o teste salva uma imagem da interface.
 
 ## Aproximando o som da referência
 

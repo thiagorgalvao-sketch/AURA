@@ -5,6 +5,13 @@
 set -e
 cd "$(dirname "$0")"
 
+for item in "AURA Bass.vst3" "AURA Bass.component" "AURA Bass.app"; do
+    if [ ! -e "$item" ]; then
+        echo "Não encontrei \"$item\" nesta pasta. Descompacte o AuraBass-Mac.zip inteiro e rode de novo."
+        exit 1
+    fi
+done
+
 VST3_DIR="$HOME/Library/Audio/Plug-Ins/VST3"
 AU_DIR="$HOME/Library/Audio/Plug-Ins/Components"
 APP_DIR="$HOME/Applications"
@@ -24,7 +31,8 @@ for item in "$VST3_DIR/AURA Bass.vst3" "$AU_DIR/AURA Bass.component" "$APP_DIR/A
     codesign --force --deep --sign - "$item" >/dev/null 2>&1 || true
 done
 
-# Faz o macOS reler a lista de Audio Units
+# Faz o macOS reler a lista de Audio Units (sem isso o Logic pode mostrar a versão antiga)
+rm -rf "$HOME/Library/Caches/AudioUnitCache" 2>/dev/null || true
 killall -9 AudioComponentRegistrar >/dev/null 2>&1 || true
 
 echo ""
@@ -35,8 +43,9 @@ else
     echo "Aviso: o auval não passou (detalhes em /tmp/aurabass-auval.log). VST3 e Standalone funcionam mesmo assim."
 fi
 
+VERSION=$(defaults read "$AU_DIR/AURA Bass.component/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "?")
 echo ""
-echo "Pronto!"
+echo "Pronto! AURA Bass $VERSION instalado."
 echo "  VST3:        $VST3_DIR/AURA Bass.vst3"
 echo "  AU:          $AU_DIR/AURA Bass.component"
 echo "  Standalone:  $APP_DIR/AURA Bass.app"

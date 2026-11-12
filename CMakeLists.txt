@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(AuraBass VERSION 0.1.0)
+# Versão: 1.<menor>.<patch>, com o número do build do CI (o AU guarda o patch em 8 bits, por isso
+# o build é dividido entre menor e patch). Uma versão nova a cada build faz o macOS/Logic
+# reconhecer o plugin atualizado em vez de usar o cache da versão anterior.
+set(AURA_BUILD_NUMBER "0" CACHE STRING "Número do build (o CI passa o run_number)")
+math(EXPR AURA_VERSION_MINOR "1 + ${AURA_BUILD_NUMBER} / 256")
+math(EXPR AURA_VERSION_PATCH "${AURA_BUILD_NUMBER} % 256")
+project(AuraBass VERSION 1.${AURA_VERSION_MINOR}.${AURA_VERSION_PATCH})
+message(STATUS "AURA Bass ${PROJECT_VERSION}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -94,6 +101,7 @@ if(AURA_BUILD_TESTS)
         Source/PluginEditor.cpp)
     target_compile_definitions(AuraDSPTest PRIVATE
         JucePlugin_Name="AURA Bass"
+        JucePlugin_VersionString="${PROJECT_VERSION}"
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0)
     target_link_libraries(AuraDSPTest PRIVATE

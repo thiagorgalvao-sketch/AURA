@@ -8,6 +8,44 @@ namespace
 {
     constexpr double sr = 48000.0;
     constexpr int blockSize = 512;
+    constexpr float inputHpfHz = 18.0f;   // igual ao do plugin
+
+    // Senoide em blocos de tamanho variável; devolve o canal 0 (e o 1, se pedido)
+    std::vector<float> runBlocks (AuraBassAudioProcessor& p, float freq, float amp, int prepareSize,
+                                  const std::vector<int>& sizes, int totalSamples, std::vector<float>* right = nullptr,
+                                  int numChannels = 2)
+    {
+        p.prepareToPlay (sr, prepareSize);
+        std::vector<float> out;
+        juce::MidiBuffer midi;
+        int pos = 0, k = 0;
+        while (pos < totalSamples)
+        {
+            const int n = juce::jmin (sizes[(size_t) (k++ % (int) sizes.size())], totalSamples - pos);
+            juce::AudioBuffer<float> buf (numChannels, n);
+            buf.clear();
+            for (int i = 0; i < n; ++i)
+                buf.setSample (0, i, amp * (float) std::sin (2.0 * juce::MathConstants<double>::pi * freq * (pos + i) / sr));
+            if (numChannels > 1 && p.getTotalNumInputChannels() > 1)
+                buf.copyFrom (1, 0, buf, 0, 0, n);
+            p.processBlock (buf, midi);
+            for (int i = 0; i < n; ++i)
+            {
+                out.push_back (buf.getSample (0, i));
+                if (right != nullptr && numChannels > 1) right->push_back (buf.getSample (1, i));
+            }
+            pos += n;
+        }
+        return out;
+    }
+
+    double maxJump (const std::vector<float>& v, size_t a, size_t b)
+    {
+        double m = 0;
+        for (size_t i = juce::jmax<size_t> (a, 1); i < juce::jmin (b, v.size()); ++i)
+            m = std::max (m, (double) std::abs (v[i] - v[i - 1]));
+        return m;
+    }
 
     void setParam (AuraBassAudioProcessor& p, const char* id, float value)
     {
@@ -100,9 +138,9 @@ int main()
         std::vector<float> in;
         auto out = run (p, 440.0f, 0.25f, &in);
         const int lat = p.getLatencySamples();
-        // Referência: entrada passada pelo mesmo HPF de 25 Hz do plugin
+        // Referência: entrada passada pelo mesmo HPF de entrada do plugin
         juce::dsp::IIR::Filter<float> hpf;
-        hpf.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass (sr, 25.0f, 0.707f);
+        hpf.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass (sr, inputHpfHz, 0.707f);
         for (auto& x : in) x = hpf.processSample (x);
         double err = 0, errShift = 0;
         for (size_t i = from; i < out.size(); ++i)
@@ -136,7 +174,7 @@ int main()
         std::vector<float> in;
         auto out = run (p, 100.0f, 0.25f, &in);
         juce::dsp::IIR::Filter<float> hpf;
-        hpf.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass (sr, 25.0f, 0.707f);
+        hpf.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass (sr, inputHpfHz, 0.707f);
         for (auto& x : in) x = hpf.processSample (x);
         const int lat = p.getLatencySamples();
         double err = 0;
@@ -265,6 +303,153 @@ int main()
         for (int i = 0; i < blockSize; ++i) buf.setSample (0, i, 0.5f * (float) std::sin (i * 0.05));
         p.processBlock (buf, midi);
         check (std::isfinite (buf.getSample (0, blockSize - 1)), "processa mono");
+    }
+
+    std::printf ("Blocos maiores que o anunciado (prepare 256, blocos de 4096 e tamanhos irregulares)\n");
+    {
+        AuraBassAudioProcessor a, b;
+        const auto ref = runBlocks (a, 110.0f, 0.25f, 256, { 256 }, 48000);
+        const auto big = runBlocks (b, 110.0f, 0.25f, 256, { 4096, 37, 1000, 256, 3 }, 48000);
+        double err = 0;
+        for (size_t i = 0; i < ref.size(); ++i) err = std::max (err, (double) std::abs (ref[i] - big[i]));
+        std::printf ("  diferença máxima: %.2e\n", err);
+        check (err < 1.0e-5, "mesmo resultado com qualquer tamanho de bloco");
+        check (finite (big), "sem NaN/Inf");
+    }
+
+    std::printf ("Bypass da DAW mantém o alinhamento (atraso = latência)\n");
+    {
+        AuraBassAudioProcessor p;
+        p.prepareToPlay (sr, blockSize);
+        const int lat = p.getLatencySamples();
+        juce::AudioBuffer<float> buf (2, blockSize); juce::MidiBuffer midi;
+        std::vector<float> in, out;
+        for (int blk = 0; blk < 8; ++blk)
+        {
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float x = 0.3f * (float) std::sin (0.013 * (blk * blockSize + i));
+                buf.setSample (0, i, x); buf.setSample (1, i, x); in.push_back (x);
+            }
+            p.processBlockBypassed (buf, midi);
+            for (int i = 0; i < blockSize; ++i) out.push_back (buf.getSample (0, i));
+        }
+        double err = 0;
+        for (size_t i = (size_t) lat; i < out.size(); ++i) err = std::max (err, (double) std::abs (out[i] - in[i - (size_t) lat]));
+        std::printf ("  latência %d amostras, erro %.2e\n", lat, err);
+        check (lat > 0 && err < 1.0e-6, "bypass atrasa exatamente a latência");
+    }
+
+    std::printf ("Cauda informada à DAW\n");
+    {
+        AuraBassAudioProcessor p;
+        std::printf ("  tail = %.3f s\n", p.getTailLengthSeconds());
+        check (p.getTailLengthSeconds() > 0.02, "tail cobre a IR do CAB");
+    }
+
+    std::printf ("Silêncio na entrada = silêncio na saída\n");
+    {
+        AuraBassAudioProcessor p;
+        const auto out = runBlocks (p, 100.0f, 0.0f, blockSize, { blockSize }, 48000);
+        double peak = 0; for (auto x : out) peak = std::max (peak, (double) std::abs (x));
+        std::printf ("  pico na saída: %.2e\n", peak);
+        check (peak < 1.0e-6, "sem ruído/DC com entrada em silêncio");
+    }
+
+    std::printf ("Outras taxas de amostragem\n");
+    for (double rate : { 44100.0, 96000.0, 192000.0 })
+    {
+        AuraBassAudioProcessor p;
+        p.prepareToPlay (rate, 512);
+        juce::AudioBuffer<float> buf (2, 512); juce::MidiBuffer midi;
+        bool ok = true;
+        for (int blk = 0; blk < 200; ++blk)
+        {
+            for (int i = 0; i < 512; ++i) { const float x = 0.25f * (float) std::sin (2.0 * juce::MathConstants<double>::pi * 100.0 * (blk * 512 + i) / rate); buf.setSample (0, i, x); buf.setSample (1, i, x); }
+            p.processBlock (buf, midi);
+            for (int i = 0; i < 512; ++i) ok = ok && std::isfinite (buf.getSample (0, i)) && std::abs (buf.getSample (0, i)) < 4.0f;
+        }
+        std::printf ("  %.0f Hz: latência %d\n", rate, p.getLatencySamples());
+        check (ok, "processa sem NaN/Inf nem explosão");
+    }
+
+    std::printf ("Entrada mono, saída estéreo\n");
+    {
+        AuraBassAudioProcessor p;
+        juce::AudioProcessor::BusesLayout l;
+        l.inputBuses.add (juce::AudioChannelSet::mono());
+        l.outputBuses.add (juce::AudioChannelSet::stereo());
+        check (p.setBusesLayout (l), "layout mono→estéreo aceito");
+        std::vector<float> right;
+        const auto left = runBlocks (p, 100.0f, 0.25f, blockSize, { blockSize }, 24000, &right);
+        double diff = 0, peak = 0;
+        for (size_t i = 0; i < left.size(); ++i) { diff = std::max (diff, (double) std::abs (left[i] - right[i])); peak = std::max (peak, (double) std::abs (right[i])); }
+        check (diff < 1.0e-7 && peak > 0.05, "os dois lados saem iguais");
+    }
+
+    std::printf ("Religar o DRIVE e o CAB depois de um tempo desligados, sem estalo\n");
+    {
+        AuraBassAudioProcessor p;
+        setParam (p, ParamIDs::driveOn, 0.0f);
+        setParam (p, ParamIDs::cab, 0.0f);
+        p.prepareToPlay (sr, blockSize);
+        juce::AudioBuffer<float> buf (2, blockSize); juce::MidiBuffer midi;
+        std::vector<float> out;
+        for (int blk = 0; blk < 240; ++blk)
+        {
+            if (blk == 100) setParam (p, ParamIDs::driveOn, 1.0f);
+            if (blk == 160) setParam (p, ParamIDs::cab, 1.0f);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float x = 0.25f * (float) std::sin (2.0 * juce::MathConstants<double>::pi * 100.0 * (blk * blockSize + i) / sr);
+                buf.setSample (0, i, x); buf.setSample (1, i, x);
+            }
+            p.processBlock (buf, midi);
+            for (int i = 0; i < blockSize; ++i) out.push_back (buf.getSample (0, i));
+        }
+        const double steady = maxJump (out, 20000, 50000);
+        const double driveOn = maxJump (out, 100 * blockSize - 100, 100 * blockSize + 3000);
+        const double cabOn = maxJump (out, 160 * blockSize - 100, 160 * blockSize + 3000);
+        const double after = maxJump (out, 200 * blockSize, 240 * blockSize);
+        std::printf ("  maior salto: estável %.4f, DRIVE on %.4f, CAB on %.4f, depois %.4f\n", steady, driveOn, cabOn, after);
+        check (driveOn <= std::max (steady, after) * 1.15, "DRIVE volta sem estalo");
+        check (cabOn <= std::max (steady, after) * 1.15, "CAB volta sem estalo");
+    }
+
+    std::printf ("EQ girando rápido não gera degraus (zipper)\n");
+    {
+        AuraBassAudioProcessor p;
+        setParam (p, ParamIDs::cab, 0.0f);
+        setParam (p, ParamIDs::driveOn, 0.0f);
+        p.prepareToPlay (sr, blockSize);
+        juce::AudioBuffer<float> buf (2, blockSize); juce::MidiBuffer midi;
+        std::vector<float> out;
+        for (int blk = 0; blk < 120; ++blk)
+        {
+            if (blk >= 40 && blk < 80) setParam (p, ParamIDs::low, (blk % 2 == 0) ? 12.0f : -12.0f);   // salta 24 dB a cada bloco
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float x = 0.25f * (float) std::sin (2.0 * juce::MathConstants<double>::pi * 60.0 * (blk * blockSize + i) / sr);
+                buf.setSample (0, i, x); buf.setSample (1, i, x);
+            }
+            p.processBlock (buf, midi);
+            for (int i = 0; i < blockSize; ++i) out.push_back (buf.getSample (0, i));
+        }
+        const double steady = maxJump (out, 10000, 20000);
+        const double moving = maxJump (out, 40 * blockSize, 80 * blockSize);
+        std::printf ("  maior salto: parado %.4f, girando %.4f\n", steady, moving);
+        check (moving < steady * 4.0 && finite (out), "variação suave do EQ");
+    }
+
+    std::printf ("Preset atual salvo na sessão\n");
+    {
+        AuraBassAudioProcessor a, b;
+        a.setCurrentProgram (2);
+        juce::MemoryBlock mb;
+        a.getStateInformation (mb);
+        b.setStateInformation (mb.getData(), (int) mb.getSize());
+        check (b.getCurrentProgram() == 2, "preset restaurado");
+        check (std::abs (b.apvts.getRawParameterValue (ParamIDs::drive)->load() + 8.0f) < 0.05f, "valores do preset restaurados");
     }
 
     // Salva uma imagem da interface (útil para conferir o layout sem abrir um host)

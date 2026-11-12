@@ -10,6 +10,9 @@ namespace
     constexpr float clipBias      = 0.15f;   // assimetria -> harmônicos pares
     constexpr int   osFactorLog2  = 2;       // 2^2 = 4x oversampling
     constexpr float wetTrim       = 0.7f;    // -3 dB: deixa Drive máximo perto de 0 dBFS
+    constexpr float inputHpfHz    = 18.0f;   // abaixo do Si grave (30,9 Hz) de um baixo de 5 cordas
+    constexpr int   toneSubBlock  = 32;      // EQ: coeficientes recalculados a cada 32 amostras ao girar
+    constexpr double maxIrSeconds = 1.0;
 
     float dbToGain (float db) { return juce::Decibels::decibelsToGain (db); }
 
@@ -22,12 +25,18 @@ namespace
 
     // Presets de fábrica (o primeiro é o padrão)
     constexpr Preset presets[] = {
-        { "AURA (padrão)",   0.0f,   0.0f, 0.0f,  0.0f, 0.0f, 3.0f, 100.0f, true, true  },
-        { "Clean DI",        0.0f,   0.0f, 2.0f,  0.0f, 1.0f, 2.0f, 100.0f, true, false },
-        { "Grit leve",       0.0f,  -8.0f, 1.0f,  2.0f, 0.0f, 3.0f,  60.0f, true, true  },
-        { "Drive pesado",    0.0f,  10.0f, 3.0f,  4.0f, -1.0f, 4.0f, 85.0f, true, true  },
-        { "Slap brilhante",  0.0f, -12.0f, 4.0f, -5.0f, 6.0f, 6.0f,  35.0f, true, true  },
+        { "AURA (padrão)",   0.0f,   0.0f, 0.0f,  0.0f,  0.0f, 3.0f, 100.0f, true, true  },
+        { "Clean DI",        0.0f,   0.0f, 2.0f,  0.0f,  1.0f, 2.0f, 100.0f, true, false },
+        { "Grit leve",       0.0f,  -8.0f, 1.0f,  2.0f,  0.0f, 3.0f,  60.0f, true, true  },
+        { "Drive pesado",    0.0f,  10.0f, 3.0f,  4.0f, -1.0f, 4.0f,  85.0f, true, true  },
+        { "Slap brilhante",  0.0f, -12.0f, 4.0f, -5.0f,  6.0f, 6.0f,  35.0f, true, true  },
     };
+    constexpr int numPresets = (int) (sizeof (presets) / sizeof (presets[0]));
+
+    bool isIdle (const juce::SmoothedValue<float>& v) noexcept
+    {
+        return juce::exactlyEqual (v.getTargetValue(), 0.0f) && ! v.isSmoothing();
+    }
 }
 
 //==============================================================================
@@ -50,23 +59,27 @@ AuraBassAudioProcessor::AuraBassAudioProcessor()
 }
 
 //==============================================================================
-int AuraBassAudioProcessor::getNumPrograms() { return (int) std::size (presets); }
+int AuraBassAudioProcessor::getNumPrograms() { return numPresets; }
 
 const juce::String AuraBassAudioProcessor::getProgramName (int index)
 {
-    return juce::isPositiveAndBelow (index, (int) std::size (presets)) ? juce::String::fromUTF8 (presets[index].name) : juce::String();
+    return juce::isPositiveAndBelow (index, numPresets) ? juce::String::fromUTF8 (presets[index].name) : juce::String();
 }
 
 void AuraBassAudioProcessor::setCurrentProgram (int index)
 {
-    if (! juce::isPositiveAndBelow (index, (int) std::size (presets)))
+    if (! juce::isPositiveAndBelow (index, numPresets))
         return;
-    currentProgram = index;
+    currentProgram.store (index);
     const auto& pr = presets[index];
     auto set = [this] (const char* id, float v)
     {
         if (auto* p = apvts.getParameter (id))
+        {
+            p->beginChangeGesture();
             p->setValueNotifyingHost (p->convertTo0to1 (v));
+            p->endChangeGesture();
+        }
     };
     set (ParamIDs::level, pr.level);
     set (ParamIDs::drive, pr.drive);
@@ -82,7 +95,8 @@ void AuraBassAudioProcessor::setCurrentProgram (int index)
 //==============================================================================
 juce::String AuraBassAudioProcessor::getCabIR() const
 {
-    return apvts.state.getProperty ("cabIR", "builtin:0").toString();
+    const juce::ScopedLock sl (cabIrLock);
+    return cabIrSource;
 }
 
 juce::String AuraBassAudioProcessor::getCabIRDisplayName() const
@@ -95,7 +109,10 @@ juce::String AuraBassAudioProcessor::getCabIRDisplayName() const
 
 void AuraBassAudioProcessor::setCabIR (const juce::String& source)
 {
-    apvts.state.setProperty ("cabIR", source, nullptr);
+    {
+        const juce::ScopedLock sl (cabIrLock);
+        cabIrSource = source.isNotEmpty() ? source : juce::String ("builtin:0");
+    }
     applyCabIR();
 }
 
@@ -103,6 +120,7 @@ void AuraBassAudioProcessor::applyCabIR()
 {
     // Lê a IR (embutida ou arquivo), usa só o primeiro canal, limita a 1 s e ajusta o ganho para
     // 0 dB na região de 100-800 Hz: ligar o CAB não muda o volume, qualquer que seja a IR.
+    // A Convolution do JUCE faz a troca no áudio sem travar (e com crossfade).
     juce::AudioFormatManager fm;
     fm.registerBasicFormats();
     std::unique_ptr<juce::AudioFormatReader> reader;
@@ -114,46 +132,44 @@ void AuraBassAudioProcessor::applyCabIR()
         if (f.existsAsFile())
             reader.reset (fm.createReaderFor (f));
     }
-    if (reader == nullptr)
+    if (reader == nullptr || reader->lengthInSamples <= 0 || reader->sampleRate <= 0.0)
     {
+        // Arquivo inexistente ou ilegível: volta para a IR embutida (mantendo a escolha salva)
         const bool second = ! src.startsWith ("file:") && src.getTrailingIntValue() == 1;
         auto stream = std::make_unique<juce::MemoryInputStream> (second ? BinaryData::cab_1x15_wav : BinaryData::cab_4x10_wav,
                                                                  (size_t) (second ? BinaryData::cab_1x15_wavSize : BinaryData::cab_4x10_wavSize), false);
         reader.reset (fm.createReaderFor (std::move (stream)));
     }
-    if (reader == nullptr || reader->lengthInSamples <= 0)
+    if (reader == nullptr || reader->lengthInSamples <= 0 || reader->sampleRate <= 0.0)
         return;
 
-    const int len = (int) std::min (reader->lengthInSamples, (juce::int64) (reader->sampleRate * 1.0));
+    const double irRate = reader->sampleRate;
+    const int len = (int) std::min (reader->lengthInSamples, (juce::int64) (irRate * maxIrSeconds));
     juce::AudioBuffer<float> ir (1, len);
+    ir.clear();
     reader->read (&ir, 0, len, 0, true, false);
 
+    // Ganho médio (em dB) em 16 pontos entre 100 e 800 Hz: robusto contra vales estreitos da IR
+    constexpr int numPoints = 16;
     double sumDb = 0.0;
-    const double freqs[] = { 100.0, 200.0, 400.0, 800.0 };
-    for (double f : freqs)
+    const float* d = ir.getReadPointer (0);
+    for (int k = 0; k < numPoints; ++k)
     {
+        const double f = 100.0 * std::pow (8.0, (double) k / (numPoints - 1));
+        const double w = juce::MathConstants<double>::twoPi * f / irRate;
         double re = 0.0, im = 0.0;
-        const double w = juce::MathConstants<double>::twoPi * f / reader->sampleRate;
-        const float* d = ir.getReadPointer (0);
         for (int n = 0; n < len; ++n) { re += d[n] * std::cos (w * n); im -= d[n] * std::sin (w * n); }
         sumDb += juce::Decibels::gainToDecibels (std::sqrt (re * re + im * im), -100.0);
     }
-    const double avgDb = sumDb / (double) std::size (freqs);
+    const double avgDb = sumDb / numPoints;
     if (avgDb > -90.0)
         ir.applyGain ((float) juce::Decibels::decibelsToGain (-avgDb));
 
+    cabTailSeconds.store ((float) ((double) len / irRate));
+
     using C = juce::dsp::Convolution;
-    cabConvolution.loadImpulseResponse (std::move (ir), reader->sampleRate, C::Stereo::no, C::Trim::yes, C::Normalise::no);
-}
-
-float AuraBassAudioProcessor::getUiScale() const
-{
-    return juce::jlimit (1.0f, 1.5f, (float) apvts.state.getProperty ("uiScale", 1.0f));
-}
-
-void AuraBassAudioProcessor::setUiScale (float scale)
-{
-    apvts.state.setProperty ("uiScale", scale, nullptr);
+    cabConvolution.loadImpulseResponse (std::move (ir), irRate, C::Stereo::no, C::Trim::yes, C::Normalise::no);
+    cabIrVersion.fetch_add (1);
 }
 
 //==============================================================================
@@ -185,25 +201,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::crea
     using namespace juce;
     std::vector<std::unique_ptr<RangedAudioParameter>> p;
 
-    // Textos dos parâmetros (também usados pela DAW): dB com uma casa decimal, % inteiro
+    // Textos dos parâmetros (também usados pela DAW): dB com uma casa decimal, % inteiro.
+    // valueFromString permite digitar valores na DAW ("3", "-4.5 dB", "60%").
+    auto parseNumber = [] (const String& t) { return t.retainCharacters ("0123456789.,-+").replaceCharacter (',', '.').getFloatValue(); };
     auto dbAttr = AudioParameterFloatAttributes()
                       .withLabel ("dB")
-                      .withStringFromValueFunction ([] (float v, int) { return String (std::abs (v) < 0.05f ? 0.0f : v, 1) + " dB"; });
+                      .withStringFromValueFunction ([] (float v, int) { return String (std::abs (v) < 0.05f ? 0.0f : v, 1) + " dB"; })
+                      .withValueFromStringFunction (parseNumber);
     auto pctAttr = AudioParameterFloatAttributes()
                        .withLabel ("%")
-                       .withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + "%"; });
-    auto eq = [] (int) { return NormalisableRange<float> (-12.0f, 12.0f, 0.1f); };
+                       .withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + "%"; })
+                       .withValueFromStringFunction (parseNumber);
+    auto eq = [] { return NormalisableRange<float> (-12.0f, 12.0f, 0.1f); };
 
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::level, 1 }, "Level",
                      NormalisableRange<float> (-15.0f, 15.0f, 0.1f), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::drive, 1 }, "Drive",
                      NormalisableRange<float> (-15.0f, 15.0f, 0.1f), 0.0f, dbAttr));
-    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::low, 1 }, "Low",
-                     eq (0), 0.0f, dbAttr));
-    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::mid, 1 }, "Mid",
-                     eq (0), 0.0f, dbAttr));
-    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::high, 1 }, "High",
-                     eq (0), 0.0f, dbAttr));
+    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::low, 1 }, "Low", eq(), 0.0f, dbAttr));
+    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::mid, 1 }, "Mid", eq(), 0.0f, dbAttr));
+    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::high, 1 }, "High", eq(), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::presence, 1 }, "Presence",
                      NormalisableRange<float> (-7.0f, 7.0f, 0.1f), 3.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::blend, 1 }, "Blend",
@@ -216,10 +233,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::crea
 
 bool AuraBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
+    const auto& in  = layouts.getMainInputChannelSet();
     const auto& out = layouts.getMainOutputChannelSet();
-    if (out != juce::AudioChannelSet::mono() && out != juce::AudioChannelSet::stereo())
+    const auto mono = juce::AudioChannelSet::mono(), stereo = juce::AudioChannelSet::stereo();
+
+    if (out != mono && out != stereo)
         return false;
-    return out == layouts.getMainInputChannelSet();
+    // mono→mono, estéreo→estéreo e mono→estéreo (faixa de baixo mono saindo em estéreo)
+    return in == out || (in == mono && out == stereo);
 }
 
 //==============================================================================
@@ -241,36 +262,39 @@ float AuraBassAudioProcessor::shape (float x) noexcept
 void AuraBassAudioProcessor::setupFixedFilters()
 {
     const auto sr = currentSampleRate;
-
-    *inputHpf.state    = Coefs::makeHighPass (sr, 25.0f, 0.707f);
+    *inputHpf.state    = Coefs::makeHighPass (sr, inputHpfHz, 0.707f);
     *preEmphasis.state = Coefs::makePeakFilter (sr, 800.0f, 0.7f, dbToGain (6.0f));  // médios entram mais quentes no clipper
     *postDcBlock.state = Coefs::makeHighPass (sr, 20.0f, 0.707f);
-    *postLpf.state     = Coefs::makeLowPass  (sr, 7000.0f, 0.707f);                   // corta o "fizz" digital
+    *postLpf.state     = Coefs::makeLowPass  (sr, juce::jmin (7000.0f, (float) sr * 0.45f), 0.707f);  // corta o "fizz" digital
 }
 
-void AuraBassAudioProcessor::updateToneFilters (bool force)
+void AuraBassAudioProcessor::setToneCoefficients (float low, float mid, float high, float presence)
 {
     const auto sr = currentSampleRate;
-    const float low = pLow->load(), mid = pMid->load(), high = pHigh->load(), pres = pPresence->load();
-
-    if (force || ! juce::exactlyEqual (low, lastLow))
-        *lowShelf.state = Coefs::makeLowShelf (sr, lowFreq, 0.707f, dbToGain (lastLow = low));
-    if (force || ! juce::exactlyEqual (mid, lastMid))
-        *midPeak.state = Coefs::makePeakFilter (sr, midFreq, midQ, dbToGain (lastMid = mid));
-    if (force || ! juce::exactlyEqual (high, lastHigh))
-        *highShelf.state = Coefs::makeHighShelf (sr, highFreq, 0.707f, dbToGain (lastHigh = high));
-    if (force || ! juce::exactlyEqual (pres, lastPresence))
-        *presencePeak.state = Coefs::makePeakFilter (sr, presenceFreq, presenceQ, dbToGain (lastPresence = pres));
+    const float nyq = (float) sr * 0.45f;
+    *lowShelf.state     = Coefs::makeLowShelf   (sr, lowFreq, 0.707f, dbToGain (low));
+    *midPeak.state      = Coefs::makePeakFilter (sr, midFreq, midQ, dbToGain (mid));
+    *highShelf.state    = Coefs::makeHighShelf  (sr, juce::jmin (highFreq, nyq), 0.707f, dbToGain (high));
+    *presencePeak.state = Coefs::makePeakFilter (sr, juce::jmin (presenceFreq, nyq), presenceQ, dbToGain (presence));
 }
 
 void AuraBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    currentSampleRate = sampleRate;
-    const auto numChannels = (juce::uint32) juce::jmax (getTotalNumInputChannels(), getTotalNumOutputChannels());
-    juce::dsp::ProcessSpec spec { sampleRate, (juce::uint32) samplesPerBlock, numChannels };
+    currentSampleRate = sampleRate > 0.0 ? sampleRate : 44100.0;
+    maxBlockSize = juce::jmax (1, samplesPerBlock);
+    const auto numChannels = (juce::uint32) juce::jmax (1, getTotalNumInputChannels(), getTotalNumOutputChannels());
+    const juce::dsp::ProcessSpec spec { currentSampleRate, (juce::uint32) maxBlockSize, numChannels };
+
+    // Tone stack: começa já nos valores atuais (sem deslizar na abertura)
+    for (auto* s : { &lowDb, &midDb, &highDb, &presenceDb })
+        s->reset (currentSampleRate, 0.03);
+    lowDb.setCurrentAndTargetValue (pLow->load());
+    midDb.setCurrentAndTargetValue (pMid->load());
+    highDb.setCurrentAndTargetValue (pHigh->load());
+    presenceDb.setCurrentAndTargetValue (pPresence->load());
 
     setupFixedFilters();
-    updateToneFilters (true);
+    setToneCoefficients (lowDb.getCurrentValue(), midDb.getCurrentValue(), highDb.getCurrentValue(), presenceDb.getCurrentValue());
 
     for (auto* f : { &inputHpf, &preEmphasis, &postDcBlock, &postLpf,
                      &lowShelf, &midPeak, &highShelf, &presencePeak })
@@ -279,38 +303,42 @@ void AuraBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
         f->reset();
     }
 
-    // IR carregada antes do prepare: já fica ativa no primeiro bloco
-    applyCabIR();
+    // A IR já carregada é reaproveitada (e reamostrada) pelo prepare
     cabConvolution.prepare (spec);
     cabConvolution.reset();
 
     oversampling = std::make_unique<juce::dsp::Oversampling<float>> (
         numChannels, osFactorLog2, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, true, true);
-    oversampling->initProcessing ((size_t) samplesPerBlock);
+    oversampling->initProcessing ((size_t) maxBlockSize);
 
     const int latency = (int) std::round (oversampling->getLatencyInSamples());
     setLatencySamples (latency);
 
-    dryDelay.prepare (spec);
-    dryDelay.setMaximumDelayInSamples (juce::jmax (latency + 1, 64));
-    dryDelay.setDelay ((float) latency);
-    dryDelay.reset();
+    for (auto* dl : { &dryDelay, &bypassDelay })
+    {
+        dl->prepare (spec);
+        dl->setMaximumDelayInSamples (juce::jmax (latency + 1, 64));
+        dl->setDelay ((float) latency);
+        dl->reset();
+    }
 
-    dryBuffer.setSize ((int) numChannels, samplesPerBlock);
-    preCabBuffer.setSize ((int) numChannels, samplesPerBlock);
+    dryBuffer.setSize ((int) numChannels, maxBlockSize);
+    preCabBuffer.setSize ((int) numChannels, maxBlockSize);
 
-    const double osRate = sampleRate * (1 << osFactorLog2);
+    const double osRate = currentSampleRate * (1 << osFactorLog2);
     driveGain.reset (osRate, 0.05);
     driveGain.setCurrentAndTargetValue (dbToGain (pDrive->load() + driveRefDb));
-    blendMix.reset (sampleRate, 0.05);
+    blendMix.reset (currentSampleRate, 0.05);
     blendMix.setCurrentAndTargetValue (effectiveBlend());
-    cabMix.reset (sampleRate, 0.03);
+    cabMix.reset (currentSampleRate, 0.03);
     cabMix.setCurrentAndTargetValue (pCab->load() > 0.5f ? 1.0f : 0.0f);
-    outputGain.reset (sampleRate, 0.05);
+    outputGain.reset (currentSampleRate, 0.05);
     outputGain.setCurrentAndTargetValue (dbToGain (pLevel->load()));
-    autoGain.reset (sampleRate, 0.05);
+    autoGain.reset (currentSampleRate, 0.05);
     lastCompDrive = pDrive->load();
     autoGain.setCurrentAndTargetValue (levelCompensation (lastCompDrive));
+
+    drivePathIdle = cabIdle = false;
 }
 
 //==============================================================================
@@ -319,24 +347,20 @@ void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     juce::ScopedNoDenormals noDenormals;
 
     const int numIn  = getTotalNumInputChannels();
-    const int numOut = getTotalNumOutputChannels();
+    const int numOut = juce::jmin (getTotalNumOutputChannels(), buffer.getNumChannels());
+    const int numSamples = buffer.getNumSamples();
     for (int ch = numIn; ch < numOut; ++ch)
-        buffer.clear (ch, 0, buffer.getNumSamples());
+        buffer.clear (ch, 0, numSamples);
 
-    const int numSamples  = buffer.getNumSamples();
-    const int numChannels = juce::jmin (numOut, buffer.getNumChannels());
-    if (numSamples == 0 || numChannels == 0)
+    const int procChannels = juce::jmin (numIn, numOut, (int) dryBuffer.getNumChannels());
+    if (numSamples == 0 || procChannels <= 0 || oversampling == nullptr)
         return;
 
-    // Garantia caso o host mande um bloco maior que o anunciado
-    if (numSamples > dryBuffer.getNumSamples() || numChannels > dryBuffer.getNumChannels())
-    {
-        dryBuffer.setSize (numChannels, numSamples, false, false, true);
-        preCabBuffer.setSize (numChannels, numSamples, false, false, true);
-        oversampling->initProcessing ((size_t) numSamples);
-    }
-
-    updateToneFilters (false);
+    // Alvos dos parâmetros (uma vez por bloco; os SmoothedValue fazem a transição)
+    lowDb.setTargetValue (pLow->load());
+    midDb.setTargetValue (pMid->load());
+    highDb.setTargetValue (pHigh->load());
+    presenceDb.setTargetValue (pPresence->load());
     driveGain.setTargetValue (dbToGain (pDrive->load() + driveRefDb));
     blendMix.setTargetValue (effectiveBlend());
     cabMix.setTargetValue (pCab->load() > 0.5f ? 1.0f : 0.0f);
@@ -347,6 +371,22 @@ void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         autoGain.setTargetValue (levelCompensation (d));
     }
 
+    // Blocos maiores que o anunciado são processados em pedaços (nada é realocado aqui)
+    for (int start = 0; start < numSamples; start += maxBlockSize)
+    {
+        const int len = juce::jmin (maxBlockSize, numSamples - start);
+        juce::AudioBuffer<float> chunk (buffer.getArrayOfWritePointers(), procChannels, start, len);
+        processChunk (chunk, procChannels);
+    }
+
+    // Entrada mono, saída estéreo: copia o resultado para os outros canais
+    for (int ch = procChannels; ch < numOut; ++ch)
+        buffer.copyFrom (ch, 0, buffer, 0, 0, numSamples);
+}
+
+void AuraBassAudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, int numChannels)
+{
+    const int numSamples = buffer.getNumSamples();
     auto block = juce::dsp::AudioBlock<float> (buffer).getSubsetChannelBlock (0, (size_t) numChannels);
     juce::dsp::ProcessContextReplacing<float> ctx (block);
 
@@ -365,47 +405,106 @@ void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         }
     }
 
-    // 3) Saturação em 4x
-    preEmphasis.process (ctx);
-    auto up = oversampling->processSamplesUp (block);
-    const size_t upSamples = up.getNumSamples();
-    for (size_t i = 0; i < upSamples; ++i)
+    // 3) Saturação em 4x + Blend. Com DRIVE desligado (ou Blend em 0%) o caminho saturado
+    //    não é processado: a saída é o sinal limpo alinhado.
+    if (isIdle (blendMix))
     {
-        const float g = driveGain.getNextValue();
-        const float makeup = wetTrim / std::tanh (g);   // ~1/g com pouco drive, ~1 com muito
-        for (size_t ch = 0; ch < up.getNumChannels(); ++ch)
-            up.setSample ((int) ch, (int) i, shape (up.getSample ((int) ch, (int) i) * g) * makeup);
-    }
-    oversampling->processSamplesDown (block);
-
-    postDcBlock.process (ctx);
-    postLpf.process (ctx);
-
-    // 4) Blend paralelo (o saturado já com o volume compensado)
-    for (int i = 0; i < numSamples; ++i)
-    {
-        const float m = blendMix.getNextValue();
-        const float comp = autoGain.getNextValue();
+        driveGain.skip (numSamples << osFactorLog2);
+        autoGain.skip (numSamples);
         for (int ch = 0; ch < numChannels; ++ch)
+            buffer.copyFrom (ch, 0, dryBuffer, ch, 0, numSamples);
+        drivePathIdle = true;
+    }
+    else
+    {
+        if (drivePathIdle)
         {
-            auto* d = buffer.getWritePointer (ch);
-            d[i] = dryBuffer.getSample (ch, i) * (1.0f - m) + d[i] * comp * m;
+            // Volta do repouso: zera os estados antigos (o Blend sobe do 0, sem clique)
+            preEmphasis.reset();
+            oversampling->reset();
+            postDcBlock.reset();
+            postLpf.reset();
+            drivePathIdle = false;
+        }
+
+        preEmphasis.process (ctx);
+        auto up = oversampling->processSamplesUp (block);
+        const int upSamples = (int) up.getNumSamples();
+        const int upChannels = (int) up.getNumChannels();
+
+        if (driveGain.isSmoothing())
+        {
+            for (int i = 0; i < upSamples; ++i)
+            {
+                const float g = driveGain.getNextValue();
+                const float makeup = wetTrim / std::tanh (g);   // ~1/g com pouco drive, ~1 com muito
+                for (int ch = 0; ch < upChannels; ++ch)
+                    up.setSample (ch, i, shape (up.getSample (ch, i) * g) * makeup);
+            }
+        }
+        else
+        {
+            const float g = driveGain.getTargetValue();
+            const float makeup = wetTrim / std::tanh (g);
+            for (int ch = 0; ch < upChannels; ++ch)
+            {
+                float* x = up.getChannelPointer ((size_t) ch);
+                for (int i = 0; i < upSamples; ++i)
+                    x[i] = shape (x[i] * g) * makeup;
+            }
+        }
+        oversampling->processSamplesDown (block);
+
+        postDcBlock.process (ctx);
+        postLpf.process (ctx);
+
+        // Blend paralelo (o saturado já com o volume compensado)
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float m = blendMix.getNextValue();
+            const float comp = autoGain.getNextValue();
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                auto* d = buffer.getWritePointer (ch);
+                d[i] = dryBuffer.getSample (ch, i) * (1.0f - m) + d[i] * comp * m;
+            }
         }
     }
 
-    // 5) Tone stack
-    lowShelf.process (ctx);
-    midPeak.process (ctx);
-    highShelf.process (ctx);
-    presencePeak.process (ctx);
+    // 4) Tone stack (ganhos suavizados)
+    processToneStack (block);
 
-    // 6) Cab (crossfade suave ao ligar/desligar)
+    // 5) CAB + Level. Com o CAB desligado a convolução não é processada.
+    if (isIdle (cabMix))
+    {
+        cabIdle = true;
+        if (outputGain.isSmoothing())
+        {
+            for (int i = 0; i < numSamples; ++i)
+            {
+                const float out = outputGain.getNextValue();
+                for (int ch = 0; ch < numChannels; ++ch)
+                    buffer.getWritePointer (ch)[i] *= out;
+            }
+        }
+        else
+        {
+            buffer.applyGain (0, numSamples, outputGain.getTargetValue());
+        }
+        return;
+    }
+
+    if (cabIdle)
+    {
+        cabConvolution.reset();   // volta do repouso sem a cauda antiga
+        cabIdle = false;
+    }
+
     for (int ch = 0; ch < numChannels; ++ch)
         preCabBuffer.copyFrom (ch, 0, buffer, ch, 0, numSamples);
 
     cabConvolution.process (ctx);
 
-    // 7) Mix do cab + Level
     for (int i = 0; i < numSamples; ++i)
     {
         const float c = cabMix.getNextValue();
@@ -418,21 +517,81 @@ void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     }
 }
 
+void AuraBassAudioProcessor::processToneStack (juce::dsp::AudioBlock<float>& block)
+{
+    const int n = (int) block.getNumSamples();
+    for (int pos = 0; pos < n; pos += toneSubBlock)
+    {
+        const int len = juce::jmin (toneSubBlock, n - pos);
+        if (lowDb.isSmoothing() || midDb.isSmoothing() || highDb.isSmoothing() || presenceDb.isSmoothing())
+            setToneCoefficients (lowDb.skip (len), midDb.skip (len), highDb.skip (len), presenceDb.skip (len));
+
+        auto sub = block.getSubBlock ((size_t) pos, (size_t) len);
+        juce::dsp::ProcessContextReplacing<float> ctx (sub);
+        lowShelf.process (ctx);
+        midPeak.process (ctx);
+        highShelf.process (ctx);
+        presencePeak.process (ctx);
+    }
+}
+
+//==============================================================================
+// Bypass pela DAW: o sinal passa limpo, mas atrasado pela mesma latência, para continuar
+// alinhado com as outras faixas (a DAW compensa a latência do plugin mesmo em bypass).
+void AuraBassAudioProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+{
+    juce::ScopedNoDenormals noDenormals;
+
+    const int numIn  = getTotalNumInputChannels();
+    const int numOut = juce::jmin (getTotalNumOutputChannels(), buffer.getNumChannels());
+    const int numSamples = buffer.getNumSamples();
+    for (int ch = numIn; ch < numOut; ++ch)
+        buffer.clear (ch, 0, numSamples);
+
+    const int procChannels = juce::jmin (numIn, numOut, (int) dryBuffer.getNumChannels());
+    if (numSamples == 0 || procChannels <= 0 || getLatencySamples() == 0)
+        return;
+
+    for (int ch = 0; ch < procChannels; ++ch)
+    {
+        float* d = buffer.getWritePointer (ch);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            bypassDelay.pushSample (ch, d[i]);
+            d[i] = bypassDelay.popSample (ch);
+        }
+    }
+    for (int ch = procChannels; ch < numOut; ++ch)
+        buffer.copyFrom (ch, 0, buffer, 0, 0, numSamples);
+}
+
 //==============================================================================
 void AuraBassAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    if (auto xml = apvts.copyState().createXml())
+    auto state = apvts.copyState();
+    state.setProperty ("cabIR", getCabIR(), nullptr);
+    state.setProperty ("uiScale", uiScale.load(), nullptr);
+    state.setProperty ("program", currentProgram.load(), nullptr);
+    state.setProperty ("version", JucePlugin_VersionString, nullptr);
+    if (auto xml = state.createXml())
         copyXmlToBinary (*xml, destData);
 }
 
 void AuraBassAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    if (auto xml = getXmlFromBinary (data, sizeInBytes))
-        if (xml->hasTagName (apvts.state.getType()))
-        {
-            apvts.replaceState (juce::ValueTree::fromXml (*xml));
-            applyCabIR();
-        }
+    auto xml = getXmlFromBinary (data, sizeInBytes);
+    if (xml == nullptr || ! xml->hasTagName (apvts.state.getType()))
+        return;
+
+    auto tree = juce::ValueTree::fromXml (*xml);
+    const auto ir = tree.getProperty ("cabIR", "builtin:0").toString();
+    setUiScale ((float) tree.getProperty ("uiScale", 1.0f));
+    currentProgram.store (juce::jlimit (0, numPresets - 1, (int) tree.getProperty ("program", 0)));
+    for (auto id : { "cabIR", "uiScale", "program", "version" })
+        tree.removeProperty (id, nullptr);
+
+    apvts.replaceState (tree);
+    setCabIR (ir);
 }
 
 juce::AudioProcessorEditor* AuraBassAudioProcessor::createEditor()
