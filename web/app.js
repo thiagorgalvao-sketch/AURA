@@ -1,7 +1,24 @@
+// AURA Bass — app da versão web
+// Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+// Obra protegida pelas Leis 9.609/1998 e 9.610/1998. Uso pessoal permitido;
+// cópia, redistribuição ou obra derivada apenas com autorização por escrito.
+// Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 // AURA Bass — app da versão web.
 // Desenha o mesmo painel do plugin num canvas (coordenadas de layout.js) e monta a cadeia
 // de áudio: microfone/interface -> AudioWorklet (drive, EQ, blend) -> CAB (convolução) -> saída.
 'use strict';
+
+// Registro de autoria — aparece no menu "Sobre" e fica no pacote do app.
+// Remover ou alterar este aviso é vedado pela licença (ver LICENSE).
+const AUTORIA = [
+  'AURA Bass — overdrive e pré de baixo',
+  'Copyright (c) 2026 Thiago Galvão',
+  'Todos os direitos reservados — Leis 9.609/1998 e 9.610/1998',
+  'github.com/thiagorgalvao-sketch/AURA',
+];
+const AURA_PROV = 'AURA-PROV/1 obra=AURA-Bass autor=Thiago-Galvao ano=2026 '
+  + 'lei=9609/1998+9610/1998 origem=github.com/thiagorgalvao-sketch/AURA direitos=reservados';
+try { window.AURA_PROV = AURA_PROV; } catch (e) { /* sem window */ }
 
 const L = window.AuraLayout;
 const TunerApi = window.AuraTuner;
@@ -823,6 +840,15 @@ async function openMenu(ev, section) {
     version.className = 'tip';
     version.textContent = 'Versão web · mesmo processamento do plugin';
     menuEl.appendChild(version);
+
+    menuEl.appendChild(document.createElement('hr'));
+    menuEl.appendChild(menuHeader('Sobre'));
+    for (const line of AUTORIA) {
+      const d = document.createElement('div');
+      d.className = 'tip';
+      d.textContent = line;
+      menuEl.appendChild(d);
+    }
   }
 
   menuEl.hidden = false;

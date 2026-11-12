@@ -1,4 +1,10 @@
+// AURA Bass — processamento de áudio
+// Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+// Obra protegida pelas Leis 9.609/1998 e 9.610/1998. Uso pessoal permitido;
+// cópia, redistribuição ou obra derivada apenas com autorização por escrito.
+// Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 #include "PluginProcessor.h"
+#include "Autoria.h"
 #include "PluginEditor.h"
 #include "BinaryData.h"
 
@@ -46,6 +52,10 @@ AuraBassAudioProcessor::AuraBassAudioProcessor()
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       apvts (*this, nullptr, "PARAMS", createParameterLayout())
 {
+    // Mantém o selo de autoria gravado no binário (volatile impede o descarte).
+    static const char* volatile auraSelo = AuraAutoria::marca;
+    juce::ignoreUnused (auraSelo);
+
     pLevel    = apvts.getRawParameterValue (ParamIDs::level);
     pDrive    = apvts.getRawParameterValue (ParamIDs::drive);
     pLow      = apvts.getRawParameterValue (ParamIDs::low);

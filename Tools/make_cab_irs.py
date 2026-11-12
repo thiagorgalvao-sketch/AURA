@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# AURA Bass — gerador das respostas de impulso
+# Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+# Obra protegida pelas Leis 9.609/1998 e 9.610/1998. Uso pessoal permitido;
+# cópia, redistribuição ou obra derivada apenas com autorização por escrito.
+# Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 """
 Gera as respostas de impulso (IR) embutidas do CAB a partir de um modelo de caixa de baixo:
 corte de subgrave e ressonância do gabinete, colorido dos médios, picos/vales de quebra do cone,

@@ -1,0 +1,62 @@
+AURA BASS — REGISTRO DE INTEGRIDADE DA OBRA
+Autor e titular: Thiago Galvão
+Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+Leis 9.609/1998 e 9.610/1998 — a proteção independe de registro.
+
+Gerado em (UTC): 2026-11-12T17:37:39Z
+Commit do repositório: 193508235fd52decf808597dfead539643b84255
+Arquivos: 43
+
+SHA-256 de cada arquivo:
+--------------------------------------------------------------------
+21f566db8d5757f7684e917e5624b6697308ce39c78d6f614c2e4cbabff54277  .github/workflows/build.yml
+8f5c748033c4f871d2264e2447d4f5a268c05d534dce82635eaec939fd4aad15  .github/workflows/pages.yml
+6a1a64b5978b54190618f2d28795a61e6e687da8d4f09c6f86103dd9031f1422  CMakeLists.txt
+9355d790044f95fd15e9d59a26fdc442810f29d7ad146abb5c6d796c3c68d3c6  LICENSE
+934b9aa408502ce13e777de6ad46d9a346eb697326c5558add57eee4e1ab4d45  README.md
+5f2c0cd78e815a16f5167e69c7fcbde8748011af675cb6129f0c6a176457b87e  Resources/ir/cab_1x15.wav
+18b691c2ff4b1978f23fea94b94073961510839897a59c462cdf68688624b957  Resources/ir/cab_4x10.wav
+85a8bd639d1a8e8e9ee49a69257841c9f4df3cf3e336150a346bb5e4f2dc9642  Resources/ui/arcs_lit.png
+67c381414543fd8e4fc24ab1831be44b2edea6bdf19728f42690517d3f3070a2  Resources/ui/background.jpg
+b2aa6bf06cfcff869379226c29ff4b4664ede25c4448c0b694e5ec29af523ca0  Resources/ui/cab_off.png
+b393c9d575ebc2d7ad0664b534460ee32fc8e1f37ec3fb4ca4613af87f76087b  Resources/ui/footswitch_down.png
+b04ecd6b957c75890593883fee8a778669d4b9c21cb2f116c044f6c338b70eb9  Resources/ui/led_cab_on.png
+49401c8f3084ca995763405fd682fec32f7b4be9e50069a653ead86b3f0b453b  Resources/ui/led_drive_on.png
+8033cb60942703003f1d7c34392847561a05647df1ba8f2a359884f7e9371896  Resources/ui/led_tuner_on.png
+1c6a9d9e556d214597c9ef0db3eff8f22c41a9f552fd3324317a07c870ad8dec  Resources/ui/pointer.png
+07a1e587e501af8f094da2b0b7fd06646890168a391998d0844d699226aaef43  Resources/ui/tuner_down.png
+93ec78f1d71597c05832290e3baaf4b93773f9b69096e0628d4e99e50f7f2231  Source/Autoria.h
+a98a80c3e0e51401aeff9f719f0ce2bfaa4701ffa4c3beb5066892ca9391d0a3  Source/Layout.h
+c1d0c0456b726cd9788a05ff494f22e4dca708268cfb4b88feaaa78634b86fd6  Source/PluginEditor.cpp
+1017dd6b17cd6b9c635f2f6aeeb963d6d10d34d4d5877a4a0d87d92554ceb4b1  Source/PluginEditor.h
+b8341cfe759099d9a2041142363f7f843b6a4fb8a3da96720f8de00d1362fced  Source/PluginProcessor.cpp
+0f106f650cf68b9205ae0ca09f2f930834eac5892c14840aae06011e760dc3e3  Source/PluginProcessor.h
+b8ec06df2cf1d885d498597030221a7b129f0d42774b50b8a45ee485deaf1983  Source/Tuner.h
+e7aae62087ed89d8a3e74175dd4125a449cf65b2ad3c37fa25c1c9fc3b5c00b2  TERCEIROS.md
+ebe7d714122fc7fdf3f9ad6d15c79945a788e85335c57f41fdd102aa70ad0c2d  Tests/DspTest.cpp
+502c6f961426bf96d77d903ddfeb1da5e16d12271eb483c94c49d10e98f645fc  Tests/web-dsp-test.js
+f8f7966a8b15341d846f0587c6dc3a9a5931df7000efb144630b8177aa9e78e8  Tests/web-ui-test.py
+a5537db14b7262ec697372816e461ab69384bca35c81588cd1a1b4838e57d065  Tools/FootswitchRender/Main.cpp
+63102f994f228c5d8bd9ce4a79776d7d6af6687faf72e22d6e7852f11db99fe7  Tools/autoria-hashes.sh
+eb619eac82b5b5653654512ff5512551195df8a94e05e2b1d29c7b2d582f0324  Tools/build-web.sh
+ca7626bc0e261e70fa463ae8508a8df0ce7bab1dc0146ab2bee34ecd834fd0ed  Tools/build_ui_assets.py
+ffb95917793c105ab113fe9414b69c8c0d90c44963ac6aed67e8e864641e39c1  Tools/make_cab_irs.py
+27a66fe0410223512589d1b8f3735f97f1fcbb7de27d83f47694fe28167387c7  packaging/Instalar no Mac.command
+53fd67e6698ddeb846a4c65cba685b676955d1a4aee8c7788bff868bc0318446  web/app.js
+5e0c2605d0e865c1b91f97ad6c7fc6928d81ff135fcbf4bf7a1f3f6950e508fb  web/aura-processor.js
+9f5fe30817f6e3f1a3cc6608513f5dc4369a9af3ca0373643907223be5a0481e  web/icons/icon-192.png
+50d9345cfcbc6cf684a3b7a9c937778691432678244afafe93dbfd8b4a97547b  web/icons/icon-512.png
+ad6559e35dbd07cc2193adca1324687d651d08dca84e0a297b81ca867a85d2db  web/index.html
+f95d09edd7fccd6fe67c88ed37f9373975e6a33d93fa0ac90cf6e9512c998b4a  web/layout.js
+44a9154fbff1429e371d7a8935f65083f984763061577fcb46e72bc4de37bc92  web/manifest.webmanifest
+a792c6a24b23788a66ecab2c3613a90c2efb6bbf896a8e7178a009db7b8ff64b  web/style.css
+56009d0da7c76bf877cbb714dbc41139631ce29c39992014a8dcbac5e8155698  web/sw.js
+e960945871ee31fc5289a364b0bfa00850150cd3828ee602e790722bc487aeab  web/tuner.js
+--------------------------------------------------------------------
+
+RESUMO DA OBRA (SHA-256 da lista acima):
+5981338f095953206eff6b855fd3e575968b3799f9faf88e52e2986261e9aab9
+
+Esse resumo identifica a obra inteira nesta data. Qualquer alteração em
+qualquer arquivo muda o resumo. Para ter prova de data independente,
+carimbe este arquivo conforme as instruções de AUTORIA.md.

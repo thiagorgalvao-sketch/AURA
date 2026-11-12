@@ -1,4 +1,9 @@
 #!/bin/bash
+# AURA Bass — montagem do site da versão web
+# Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+# Obra protegida pelas Leis 9.609/1998 e 9.610/1998. Uso pessoal permitido;
+# cópia, redistribuição ou obra derivada apenas com autorização por escrito.
+# Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 # Monta a pasta "site/" da versão web: página + imagens, IRs e fontes do projeto.
 # Uso: bash Tools/build-web.sh [pasta de saída]
 set -e
@@ -36,6 +41,23 @@ PY
 fi
 cp web/icons/icon-192.png web/icons/icon-512.png "$OUT/assets/"
 
-printf '%s\n' "Versão web do AURA Bass. Fontes Roboto e Russo One sob a SIL Open Font License (assets/OFL-*.txt)." > "$OUT/CREDITOS.txt"
+cp LICENSE "$OUT/LICENSE.txt"
+cat > "$OUT/CREDITOS.txt" <<'TXT'
+AURA Bass — versão para navegador
+Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+
+Obra protegida pelas Leis 9.609/1998 (Lei do Software) e 9.610/1998 (Direitos
+Autorais) e, no exterior, pela Convenção de Berna. Uso pessoal permitido;
+cópia, redistribuição, hospedagem em outro endereço ou obra derivada apenas
+com autorização por escrito do autor. Veja LICENSE.txt.
+
+Origem oficial: https://thiagorgalvao-sketch.github.io/AURA/
+Código: https://github.com/thiagorgalvao-sketch/AURA
+
+AURA-PROV/1 obra=AURA-Bass autor=Thiago-Galvao ano=2026
+lei=9609/1998+9610/1998 direitos=reservados
+
+Fontes Roboto e Russo One sob a SIL Open Font License (assets/OFL-*.txt).
+TXT
 touch "$OUT/.nojekyll"
 echo "site em $OUT ($(du -sh "$OUT" | cut -f1))"

@@ -1,4 +1,10 @@
+// AURA Bass — interface do plugin
+// Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+// Obra protegida pelas Leis 9.609/1998 e 9.610/1998. Uso pessoal permitido;
+// cópia, redistribuição ou obra derivada apenas com autorização por escrito.
+// Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 #include "PluginEditor.h"
+#include "Autoria.h"
 #include "BinaryData.h"
 
 namespace
@@ -613,6 +619,11 @@ void AuraPanel::showMainMenu (bool fromButton)
                       "Clique no nome da caixa (4x10): trocar a IR",
                       "TUNER: afinador (saída muda)" })
         m.addItem (-1, String::fromUTF8 (tip), false);
+
+    m.addSeparator();
+    m.addSectionHeader (String::fromUTF8 ("Sobre"));
+    for (auto line : { AuraAutoria::obra, AuraAutoria::copyright, AuraAutoria::direitos, AuraAutoria::site })
+        m.addItem (-1, String::fromUTF8 (line), false);
 
     auto options = PopupMenu::Options().withTargetComponent (fromButton ? static_cast<Component*> (&menuButton) : this);
     if (! fromButton) options = options.withMousePosition();

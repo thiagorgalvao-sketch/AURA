@@ -1,3 +1,8 @@
+// AURA Bass — afinador da versão web
+// Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+// Obra protegida pelas Leis 9.609/1998 e 9.610/1998. Uso pessoal permitido;
+// cópia, redistribuição ou obra derivada apenas com autorização por escrito.
+// Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 // AURA Bass — afinador da versão web. Porta de Source/Tuner.h (método YIN).
 // Recebe do AudioWorklet blocos já filtrados e decimados (~12 kHz).
 (function (root) {

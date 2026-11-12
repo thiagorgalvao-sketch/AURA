@@ -1,3 +1,8 @@
+// AURA Bass — processamento de áudio
+// Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+// Obra protegida pelas Leis 9.609/1998 e 9.610/1998. Uso pessoal permitido;
+// cópia, redistribuição ou obra derivada apenas com autorização por escrito.
+// Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>

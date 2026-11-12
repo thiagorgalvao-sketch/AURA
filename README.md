@@ -1,5 +1,12 @@
 # AURA Bass — overdrive de baixo (JUCE)
 
+> Copyright © 2026 **Thiago Galvão**. Todos os direitos reservados.
+> Obra protegida pelas Leis nº 9.609/1998 e nº 9.610/1998 e pela Convenção de
+> Berna. Uso pessoal permitido; cópia, redistribuição ou obra derivada apenas
+> com autorização por escrito. Veja [`LICENSE`](LICENSE), os componentes de
+> terceiros em [`TERCEIROS.md`](TERCEIROS.md) e a prova de autoria em
+> [`AUTORIA.md`](AUTORIA.md).
+
 Plugin de overdrive para baixo com Drive, Blend paralelo, Low, Mid, High, Presence, Level, simulação de caixa (chave CAB) e footswitch para ligar e desligar o DRIVE.
 
 ## Controles
