@@ -114,7 +114,7 @@ digitar um valor, e use os footswitches **ENGAGE** (drive) e **TUNER**. Os
 ajustes ficam salvos no aparelho. Atalhos no computador: `E` liga o drive,
 `T` o afinador, `C` o CAB.
 
-## CORTES Pedalboard (no navegador)
+## WORSHIP BASS ESSENTIALS (no navegador)
 
 **https://thiagorgalvao-sketch.github.io/AURA/pedalboard/**
 

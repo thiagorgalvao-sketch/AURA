@@ -1,6 +1,6 @@
-// CORTES Pedalboard — service worker: guarda o app para funcionar sem internet.
+// WORSHIP BASS ESSENTIALS — service worker: guarda o app para funcionar sem internet.
 // Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
-const CACHE = 'cortes-pedalboard-v1';
+const CACHE = 'wbe-pedalboard-v1';
 const FILES = [
   './', 'index.html', 'style.css', 'app.js', 'engine.js', 'presets.js', 'pb-processor.js',
   'manifest.webmanifest', 'assets/cab_4x10.wav', 'assets/icon-192.png', 'assets/icon-512.png',

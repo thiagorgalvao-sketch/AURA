@@ -1,4 +1,4 @@
-// CORTES Pedalboard — presets extraídos do concerto do MainStage
+// WORSHIP BASS ESSENTIALS — presets extraídos do concerto do MainStage
 // Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 // Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 //
@@ -104,7 +104,7 @@ const PRESETS = [
   {
     id: 'macro',
     nome: 'MACRO SYNTH',
-    sub: 'oitava + fuzz',
+    sub: 'oitava + RAT',
     cor: '#3f7d4f',
     cadeia: ['consoleEq', 'comp', 'eq', 'amp', 'gate', 'sub', 'fuzz'],
     eq: EQ_BASE,
@@ -162,7 +162,7 @@ const PEDAIS = {
     ],
   },
   amp: {
-    nome: 'CORTES 421', sub: 'bass amp', cor: '#2e2e34',
+    nome: 'WBE 421', sub: 'bass amp', cor: '#2e2e34',
     knobs: [
       { id: 'gain',   rot: 'GAIN',   min: 0, max: 10, passo: 0.1, un: '' },
       { id: 'bass',   rot: 'BASS',   min: 0, max: 10, passo: 0.1, un: '' },

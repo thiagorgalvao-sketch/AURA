@@ -59,7 +59,7 @@ lei=9609/1998+9610/1998 direitos=reservados
 
 Fontes Roboto e Russo One sob a SIL Open Font License (assets/OFL-*.txt).
 TXT
-# ---- Pedalboard CORTES (app separado, em /pedalboard) ----------------------
+# ---- Pedalboard WORSHIP BASS ESSENTIALS (app separado, em /pedalboard) ----------------------
 mkdir -p "$OUT/pedalboard/assets"
 cp pedalboard/index.html pedalboard/style.css pedalboard/app.js pedalboard/engine.js \
    pedalboard/presets.js pedalboard/pb-processor.js pedalboard/sw.js \

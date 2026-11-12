@@ -1,4 +1,4 @@
-// CORTES Pedalboard — montagem da cadeia de áudio.
+// WORSHIP BASS ESSENTIALS — montagem da cadeia de áudio.
 // Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 // Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 //

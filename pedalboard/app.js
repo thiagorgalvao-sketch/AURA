@@ -1,20 +1,20 @@
-// CORTES Pedalboard — interface e ligação com o motor de áudio.
+// WORSHIP BASS ESSENTIALS — interface e ligação com o motor de áudio.
 // Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 // Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 
 'use strict';
 
 const AUTORIA = [
-  'CORTES Pedalboard',
+  'WORSHIP BASS ESSENTIALS',
   'Copyright (c) 2026 Thiago Galvão',
   'Todos os direitos reservados — Leis 9.609/1998 e 9.610/1998',
   'github.com/thiagorgalvao-sketch/AURA',
 ];
-const AURA_PROV = 'AURA-PROV/1 obra=CORTES-Pedalboard autor=Thiago-Galvao ano=2026 '
+const AURA_PROV = 'AURA-PROV/1 obra=WORSHIP-BASS-ESSENTIALS autor=Thiago-Galvao ano=2026 '
   + 'lei=9609/1998+9610/1998 origem=github.com/thiagorgalvao-sketch/AURA direitos=reservados';
 try { window.AURA_PROV = AURA_PROV; } catch (e) { /* sem window */ }
 
-const CHAVE = 'cortes-pedalboard-v1';
+const CHAVE = 'wbe-pedalboard-v1';
 
 const $ = (s) => document.querySelector(s);
 const boardEl = $('#board'), presetsEl = $('#presets'), menuEl = $('#menu');
@@ -298,6 +298,11 @@ function salva() {
 
 function carrega() {
   try {
+    // aproveita o estado salvo sob o nome antigo do app
+    if (!localStorage.getItem(CHAVE)) {
+      const velho = localStorage.getItem('cortes-pedalboard-v1');
+      if (velho) { localStorage.setItem(CHAVE, velho); localStorage.removeItem('cortes-pedalboard-v1'); }
+    }
     const s = JSON.parse(localStorage.getItem(CHAVE) || 'null');
     if (!s || !s.pedais) return false;
     estado.preset = s.preset || estado.preset;

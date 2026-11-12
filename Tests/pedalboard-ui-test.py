@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# CORTES Pedalboard — teste de interface e de áudio num Chromium de verdade.
+# WORSHIP BASS ESSENTIALS — teste de interface e de áudio num Chromium de verdade.
 # Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 # Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 #

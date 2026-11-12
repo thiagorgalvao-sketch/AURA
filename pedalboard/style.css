@@ -1,5 +1,5 @@
 /*
- * CORTES Pedalboard — estilos
+ * WORSHIP BASS ESSENTIALS — estilos
  * Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
  * Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
  */
@@ -39,8 +39,9 @@ html, body {
 }
 
 #marca { display: flex; align-items: baseline; gap: 8px; letter-spacing: .14em; }
-#marca strong { font-size: 17px; font-weight: 800; }
+#marca strong { font-size: clamp(12px, 3.4vw, 17px); font-weight: 800; white-space: nowrap; }
 #marca span { font-size: 11px; color: var(--apagado); text-transform: uppercase; }
+@media (max-width: 460px) { #marca span { display: none; } #medidor { max-width: 90px; } }
 
 #medidor {
   flex: 1; max-width: 220px; height: 6px; margin-left: auto;
