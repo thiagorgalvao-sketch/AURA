@@ -59,5 +59,15 @@ lei=9609/1998+9610/1998 direitos=reservados
 
 Fontes Roboto e Russo One sob a SIL Open Font License (assets/OFL-*.txt).
 TXT
+# ---- Pedalboard CORTES (app separado, em /pedalboard) ----------------------
+mkdir -p "$OUT/pedalboard/assets"
+cp pedalboard/index.html pedalboard/style.css pedalboard/app.js pedalboard/engine.js \
+   pedalboard/presets.js pedalboard/pb-processor.js pedalboard/sw.js \
+   pedalboard/manifest.webmanifest "$OUT/pedalboard/"
+cp Resources/ir/cab_4x10.wav "$OUT/pedalboard/assets/"
+cp pedalboard/icons/icon-192.png pedalboard/icons/icon-512.png "$OUT/pedalboard/assets/"
+cp LICENSE "$OUT/pedalboard/LICENSE.txt"
+cp "$OUT/CREDITOS.txt" "$OUT/pedalboard/CREDITOS.txt"
+
 touch "$OUT/.nojekyll"
 echo "site em $OUT ($(du -sh "$OUT" | cut -f1))"

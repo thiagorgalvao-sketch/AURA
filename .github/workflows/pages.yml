@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'web/**'
+      - 'pedalboard/**'
       - 'Resources/ui/**'
       - 'Resources/ir/**'
       - 'Resources/fonts/**'

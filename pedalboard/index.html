@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0e11">
+<meta name="description" content="Pedalboard virtual do rig CORTES — os presets do MainStage rodando no navegador.">
+<meta name="author" content="Thiago Galvão">
+<meta name="copyright" content="Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.">
+<link rel="license" href="https://github.com/thiagorgalvao-sketch/AURA/blob/main/LICENSE">
+<!--
+  CORTES Pedalboard — Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+  Obra protegida pelas Leis 9.609/1998 e 9.610/1998 e pela Convenção de Berna.
+  AURA-PROV/1 obra=CORTES-Pedalboard autor=Thiago-Galvao ano=2026
+-->
+<title>CORTES Pedalboard</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="topo">
+  <div id="marca">
+    <strong>CORTES</strong><span>pedalboard</span>
+  </div>
+  <div id="medidor" title="Entrada"><i></i></div>
+  <button id="botaoMenu" aria-label="Menu">≡</button>
+</header>
+
+<nav id="presets" aria-label="Presets"></nav>
+
+<main id="board" aria-label="Pedais"></main>
+
+<footer id="rodape">
+  <span id="cadeiaTexto"></span>
+</footer>
+
+<div id="inicio">
+  <div class="caixa">
+    <h1>CORTES Pedalboard</h1>
+    <p>Os oito presets do seu MainStage, rodando no navegador.</p>
+    <button id="botaoLigar">Ligar</button>
+    <p class="aviso">Use fone de ouvido. Sem fone, o som volta pelo microfone e microfona.</p>
+  </div>
+</div>
+
+<div id="menu" hidden></div>
+<div id="aviso" hidden></div>
+
+<script src="presets.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

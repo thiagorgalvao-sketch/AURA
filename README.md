@@ -114,6 +114,33 @@ digitar um valor, e use os footswitches **ENGAGE** (drive) e **TUNER**. Os
 ajustes ficam salvos no aparelho. Atalhos no computador: `E` liga o drive,
 `T` o afinador, `C` o CAB.
 
+## CORTES Pedalboard (no navegador)
+
+**https://thiagorgalvao-sketch.github.io/AURA/pedalboard/**
+
+Os oito presets do concerto do MainStage ("PRESET LOGIC : MAIN STAGE CORTES"),
+recriados como um pedalboard que roda no navegador: COLORINDO, CAIXA SUJA, RATO
+DO PORÃO, OCTAVIO SUB, MACRO SYNTH, CHORA, TUDO JUNTO e SYNTH MOOG.
+
+A ordem dos pedais e os valores vieram dos próprios arquivos `.patch` do
+MainStage — o que foi lido e o que foi recriado está em
+[`pedalboard/PRESETS.md`](pedalboard/PRESETS.md).
+
+- Toque num preset para montar a cadeia; o footswitch de cada pedal liga e
+  desliga na hora; teclas `1` a `8` trocam de preset.
+- Arraste o knob para cima ou para baixo; toque duplo volta ao valor original
+  do MainStage.
+- Os ajustes ficam salvos no aparelho e dá para instalar como app.
+
+```bash
+bash Tools/build-web.sh site                 # monta os dois apps
+python3 Tests/pedalboard-ui-test.py site     # testa num Chromium de verdade
+```
+
+O teste confere a cadeia de cada um dos oito presets, que sai som, que nenhum
+preset passa de 0 dBFS, que a oitava abaixo aparece no espectro, os footswitches,
+os knobs, o menu, o estado salvo e as telas pequenas.
+
 ### Publicar a versão web
 
 O site é montado a partir do próprio projeto (mesmo painel, mesmas IRs, mesmo
