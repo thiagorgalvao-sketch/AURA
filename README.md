@@ -79,6 +79,50 @@ entrada → HPF 18 Hz → pré-ênfase (+6 dB @ 800 Hz)
 
 Todos os parâmetros têm suavização (sem cliques), o Blend é alinhado com a latência do oversampling (sem phasing), e o plugin aceita mono e estéreo.
 
+## No navegador (celular, tablet ou computador)
+
+O AURA Bass também roda direto no navegador, com o mesmo painel e o mesmo
+processamento do plugin:
+
+**https://thiagorgalvao-sketch.github.io/AURA/**
+
+Abra o endereço, toque em **Ligar** e autorize o microfone (ou a interface de
+áudio). Funciona no Chrome, no Edge e no Safari.
+
+- **Ligue no fone de ouvido.** Sem fone, o som da caixa volta para o microfone
+  e microfona.
+- **Interface de áudio:** ligue o baixo na interface e escolha-a como entrada do
+  navegador. Pelo microfone do celular também funciona, mas com menos graves.
+- **Instalar como app:** no Chrome, menu > *Instalar aplicativo*; no iPhone,
+  *Compartilhar > Adicionar à Tela de Início*. Depois de instalado, abre sem
+  internet e sem a barra do navegador.
+- **Celular em pé:** o painel gira sozinho para ocupar a tela inteira.
+- **Latência:** depende do aparelho — num computador fica em torno de 20 a 40 ms;
+  no celular costuma ser maior. Para tocar ao vivo, o plugin (VST3/AU) continua
+  sendo o caminho de menor latência.
+
+Os controles são os mesmos do plugin: arraste o knob para cima ou para a direita
+para aumentar, toque duas vezes para voltar ao padrão, toque no número para
+digitar um valor, e use os footswitches **ENGAGE** (drive) e **TUNER**. Os
+ajustes ficam salvos no aparelho. Atalhos no computador: `E` liga o drive,
+`T` o afinador, `C` o CAB.
+
+### Publicar a versão web
+
+O site é montado a partir do próprio projeto (mesmo painel, mesmas IRs, mesmo
+`Source/Layout.h`) e publicado pelo GitHub Pages:
+
+```bash
+bash Tools/build-web.sh site      # monta a pasta site/ (~1 MB)
+node Tests/web-dsp-test.js        # compara o áudio da web com o do plugin
+python3 Tests/web-ui-test.py      # abre num Chromium e testa a interface
+```
+
+O workflow `.github/workflows/pages.yml` faz isso a cada push em `main` que
+mexa em `web/`, nos recursos ou no layout, e publica o resultado. Se for a
+primeira publicação, confira em **Settings > Pages** que a origem está como
+**GitHub Actions**.
+
 ## MacBook: jeito mais fácil
 
 1. Descompacte o zip (por exemplo, na pasta Downloads).
@@ -163,6 +207,21 @@ O teste mede nível e THD em vários valores de Drive. Também verifica:
 - religar o DRIVE e o CAB sem estalo e o EQ sem zipper.
 
 O GitHub roda esses testes em todo build, e a versão só é publicada se todos passarem. Com `AURA_SNAPSHOT=ui.png`, o teste salva uma imagem da interface.
+
+### Teste da versão web
+
+```bash
+node Tests/web-dsp-test.js        # Node, sem dependências
+python3 Tests/web-ui-test.py      # precisa do Playwright com Chromium
+```
+
+O primeiro compara, amostra por amostra, o resultado do `web/aura-processor.js`
+com os números medidos no plugin (nível, THD por valor de Drive, EQ, blend) e
+confere que `web/layout.js` continua igual a `Source/Layout.h`. O segundo abre
+o site num Chromium de verdade, com um baixo em E1 como entrada falsa, e checa
+o afinador, o silêncio com o afinador ligado, os knobs, os footswitches, o
+menu, o estado salvo, o painel girado no celular em pé e o funcionamento sem
+internet.
 
 ## Aproximando o som da referência
 

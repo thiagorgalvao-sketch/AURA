@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f1012">
+<meta name="description" content="AURA Bass — overdrive de baixo com afinador, direto no navegador.">
+<title>AURA Bass</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="panel" aria-label="Painel do AURA Bass"></canvas>
+  <input id="valueInput" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" hidden>
+</main>
+
+<div id="menu" class="sheet" hidden></div>
+
+<div id="start" class="overlay">
+  <div class="card">
+    <h1>AURA <span>BASS</span></h1>
+    <p class="sub">Overdrive de baixo com afinador, direto no navegador.</p>
+    <ol class="steps">
+      <li>Ligue o baixo na entrada de áudio do aparelho (interface, adaptador ou microfone).</li>
+      <li><strong>Use fones de ouvido.</strong> Sem fones, o som da caixa volta pelo microfone e apita.</li>
+      <li>Toque em Ligar e permita o acesso ao áudio quando o navegador pedir.</li>
+    </ol>
+    <button id="startButton" class="primary">Ligar</button>
+    <p id="startNote" class="note"></p>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="layout.js"></script>
+<script src="tuner.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

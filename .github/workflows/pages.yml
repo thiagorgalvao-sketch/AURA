@@ -1,0 +1,58 @@
+name: Versão navegador (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'Resources/ui/**'
+      - 'Resources/ir/**'
+      - 'Source/Layout.h'
+      - 'Tools/build-web.sh'
+      - 'Tests/web-dsp-test.js'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Testar o processamento de áudio
+        run: node Tests/web-dsp-test.js
+
+      - name: Montar o site
+        run: bash Tools/build-web.sh site
+
+      - name: Ligar o GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
