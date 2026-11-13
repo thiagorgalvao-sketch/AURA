@@ -76,6 +76,8 @@ const state = {
   channel: 0,              // 0 = esquerda/mono, 1 = direita, 2 = soma
   inputDeviceId: '',
   outputDeviceId: '',
+  latencia: 'minima',   // minima | equilibrada | estavel
+
   inputLabel: '',       // só para mostrar qual entrada está em uso
   pressed: null,           // 'drive' | 'tuner' (footswitch afundado)
   running: false,
@@ -131,7 +133,7 @@ function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       params: state.params, driveOn: state.driveOn, cab: state.cab,
       irIndex: state.irIndex, channel: state.channel, inputDeviceId: state.inputDeviceId,
-      outputDeviceId: state.outputDeviceId,
+      outputDeviceId: state.outputDeviceId, latencia: state.latencia,
     }));
   } catch (e) { /* modo privado: segue sem salvar */ }
 }
@@ -153,6 +155,7 @@ function loadState() {
     if ([0, 1, 2].includes(saved.channel)) state.channel = saved.channel;
     if (typeof saved.inputDeviceId === 'string') state.inputDeviceId = saved.inputDeviceId;
     if (typeof saved.outputDeviceId === 'string') state.outputDeviceId = saved.outputDeviceId;
+    if (['minima', 'equilibrada', 'estavel'].includes(saved.latencia)) state.latencia = saved.latencia;
   } catch (e) { /* ignora estado inválido */ }
 }
 
@@ -171,6 +174,20 @@ function applyCabMix() {
   const t = audio.ctx.currentTime, on = state.cab ? 1 : 0;
   audio.wetGain.gain.setTargetAtTime(on, t, 0.012);
   audio.dryGain.gain.setTargetAtTime(1 - on, t, 0.012);
+
+  // Com o CAB desligado, tira a convolução do caminho: ela continuaria
+  // calculando à toa, e é o bloco mais caro da cadeia.
+  clearTimeout(applyCabMix._t);
+  if (!state.cab && audio.cabLigado) {
+    applyCabMix._t = setTimeout(() => {
+      if (!audio || state.cab) return;
+      try { audio.worklet.disconnect(audio.convolver); } catch (e) { /* já solto */ }
+      audio.cabLigado = false;
+    }, 60);
+  } else if (state.cab && !audio.cabLigado) {
+    try { audio.worklet.connect(audio.convolver); } catch (e) { /* já ligado */ }
+    audio.cabLigado = true;
+  }
 }
 
 // Ajusta a IR para 0 dB entre 100 e 800 Hz (ligar o CAB muda o timbre, não o volume)
@@ -213,6 +230,71 @@ async function setIr(index, custom) {
   } catch (err) {
     toast('Não consegui carregar essa resposta de impulso.');
   }
+}
+
+// ---------------------------------------------------------------------------
+// Latência
+// ---------------------------------------------------------------------------
+
+// Em segundos. O navegador arredonda para o menor buffer que o aparelho aceita,
+// então pedir menos do que a placa dá não quebra nada — só não ajuda.
+const ALVO_LATENCIA = { minima: 0.003, equilibrada: 0.012, estavel: 0.035 };
+
+const NOME_LATENCIA = {
+  minima: 'Mínima — a menor que o aparelho aceita',
+  equilibrada: 'Equilibrada — margem contra falhas',
+  estavel: 'Estável — para aparelhos fracos',
+};
+
+/** Entrada, saída e total, em milissegundos. */
+function medeLatencia() {
+  if (!audio) return null;
+  const faixa = audio.stream && audio.stream.getAudioTracks()[0];
+  const cfg = faixa && faixa.getSettings ? faixa.getSettings() : {};
+  const entrada = (cfg.latency || 0) * 1000;
+  const base = (audio.ctx.baseLatency || 0) * 1000;
+  const saida = (audio.ctx.outputLatency || 0) * 1000;
+  return {
+    entrada: Math.round(entrada * 10) / 10,
+    base: Math.round(base * 10) / 10,
+    saida: Math.round(saida * 10) / 10,
+    total: Math.round((entrada + base + saida) * 10) / 10,
+    taxa: audio.ctx.sampleRate,
+  };
+}
+
+function textoLatencia() {
+  const m = medeLatencia();
+  if (!m) return 'Ligue o áudio para medir.';
+  return `Agora: ${m.total} ms no total`
+       + ` (entrada ${m.entrada} · processamento ${m.base} · saída ${m.saida}), ${m.taxa / 1000} kHz`;
+}
+
+/** Troca o modo de latência refazendo o áudio com a mesma entrada. */
+async function trocaLatencia(modo) {
+  state.latencia = modo;
+  saveState();
+  if (!audio) return;
+  const deviceId = state.inputDeviceId;
+  const antigo = audio;
+  audio = null;
+  state.running = false;
+  try { antigo.stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* já parado */ }
+  try { await antigo.ctx.close(); } catch (e) { /* já fechado */ }
+  falhasAvisadas = false;
+  await iniciaAudio(deviceId);
+}
+
+// O worklet avisa quando o áudio engasga: aí a latência pedida é menor do que
+// o aparelho aguenta, e insistir só piora.
+let falhasAvisadas = false;
+
+function avisaFalhas(n) {
+  if (falhasAvisadas || n < 3) return;
+  falhasAvisadas = true;
+  toast(state.latencia === 'estavel'
+    ? 'O áudio está engasgando. Feche outros programas ou abas pesadas.'
+    : 'O áudio está engasgando. No menu, use uma latência com mais margem.', 8000);
 }
 
 // ---------------------------------------------------------------------------
@@ -326,19 +408,27 @@ async function iniciaAudio(deviceId) {
   entrarButton.disabled = true;
   startNote.textContent = 'Abrindo a entrada...';
   try {
+    // O contexto vem primeiro: assim dá para pedir a captura já na mesma taxa
+    // de amostragem e evitar que o navegador reamostre (o que custa latência).
+    const ctxAudio = new (window.AudioContext || window.webkitAudioContext)({
+      latencyHint: ALVO_LATENCIA[state.latencia] ?? 'interactive',
+    });
+    await ctxAudio.resume();
+
     const constraints = {
       audio: {
+        // Estes três processamentos do navegador existem para voz e, além de
+        // estragarem o timbre, acrescentam buffers no caminho.
         echoCancellation: false, noiseSuppression: false, autoGainControl: false,
         channelCount: { ideal: 2 },
+        sampleRate: { ideal: ctxAudio.sampleRate },
+        latency: { ideal: 0 },
         ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
       },
       video: false,
     };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     state.inputDeviceId = deviceId || '';
-
-    const ctxAudio = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-    await ctxAudio.resume();
     await ctxAudio.audioWorklet.addModule('aura-processor.js');
 
     const source = ctxAudio.createMediaStreamSource(stream);
@@ -358,13 +448,14 @@ async function iniciaAudio(deviceId) {
     master.connect(ctxAudio.destination);
 
     worklet.port.onmessage = (e) => {
+      if (e.data.falhas !== undefined) { avisaFalhas(e.data.falhas); return; }
       if (e.data.tuner && tuner.detector) {
         tuner.detector.push(e.data.tuner, e.data.rate);
         updateTuner(tuner.detector.analyse());
       }
     };
 
-    audio = { ctx: ctxAudio, stream, source, worklet, convolver, wetGain, dryGain, master };
+    audio = { ctx: ctxAudio, stream, source, worklet, convolver, wetGain, dryGain, master, cabLigado: true };
     sendParams();
     applyCabMix();
     await setIr(state.irIndex >= 0 ? state.irIndex : 0);
@@ -1004,6 +1095,21 @@ async function openMenu(ev, section) {
       dica.className = 'tip';
       dica.textContent = 'Ligue o áudio para ver os nomes das entradas.';
       menuEl.appendChild(dica);
+    }
+
+    menuEl.appendChild(menuHeader('Latência'));
+    for (const modo of ['minima', 'equilibrada', 'estavel'])
+      menuEl.appendChild(menuItem(NOME_LATENCIA[modo], () => { closeMenu(); trocaLatencia(modo); },
+                                  state.latencia === modo));
+    {
+      const t = document.createElement('div');
+      t.className = 'tip';
+      t.textContent = textoLatencia();
+      menuEl.appendChild(t);
+      const d = document.createElement('div');
+      d.className = 'tip';
+      d.textContent = 'Escolher a interface como saída costuma baixar bem a latência.';
+      menuEl.appendChild(d);
     }
 
     menuEl.appendChild(menuHeader('Saída de áudio'));

@@ -111,8 +111,12 @@ as próximas vezes. Funciona no Chrome, no Edge e no Safari.
   mostra esse caminho. Instalado, o AURA abre em tela cheia e deitado, sem a
   barra do navegador, e funciona sem internet.
 - **Celular em pé:** o painel gira sozinho para ocupar a tela inteira.
-- **Latência:** depende do aparelho — num computador fica em torno de 20 a 40 ms;
-  no celular costuma ser maior. Para tocar ao vivo, o plugin (VST3/AU) continua
+- **Latência:** o app já começa no modo de menor latência que o aparelho aceita
+  e evita reamostragem pedindo a captura na mesma taxa do processamento. No
+  menu (≡) dá para ver o número medido — entrada, processamento e saída — e
+  trocar entre **Mínima**, **Equilibrada** e **Estável**. Escolher a interface
+  como *saída* costuma ser o que mais ajuda. Se o áudio engasgar, o próprio app
+  avisa e sugere mais margem. Para tocar ao vivo, o plugin (VST3/AU) continua
   sendo o caminho de menor latência.
 
 Os controles são os mesmos do plugin: arraste o knob para cima ou para a direita

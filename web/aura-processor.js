@@ -241,10 +241,31 @@ if (typeof registerProcessor !== 'undefined') {
       this.dsp = new AuraDsp(sampleRate);
       this.dsp.onTunerData = (buf) => this.port.postMessage({ tuner: buf, rate: this.dsp.tunerRate }, [buf.buffer]);
       this.port.onmessage = (e) => { if (e.data.params) this.dsp.setParams(e.data.params); };
+
+      // Detecção de engasgo: a cada chamada o relógio do áudio deveria andar
+      // exatamente um bloco. Se pular mais do que isso, o processamento não
+      // acompanhou o buffer — é o sinal de que a latência pedida é curta
+      // demais para o aparelho.
+      this.ultimoQuadro = -1;
+      this.falhas = 0;
+      this.avisadas = -1;
+      this.proximoAviso = 0;
     }
     process(inputs, outputs) {
       const out = outputs[0];
       if (!out || !out[0]) return true;
+
+      const bloco = out[0].length;
+      if (this.ultimoQuadro >= 0 && currentFrame - this.ultimoQuadro > bloco * 1.5) this.falhas++;
+      this.ultimoQuadro = currentFrame;
+      if (currentFrame >= this.proximoAviso) {
+        this.proximoAviso = currentFrame + sampleRate * 2;
+        if (this.falhas !== this.avisadas) {
+          this.avisadas = this.falhas;
+          this.port.postMessage({ falhas: this.falhas });
+        }
+      }
+
       this.dsp.process(inputs[0] || [], out[0]);
       for (let ch = 1; ch < out.length; ch++) out[ch].set(out[0]);
       return true;

@@ -276,6 +276,36 @@ def main():
         page.set_viewport_size({"width": 1280, "height": 720})
         page.wait_for_timeout(300)
 
+        print("Latência")
+        lat = page.evaluate("""() => {
+            const ctx = window.__aura.audio.ctx;
+            return { base: ctx.baseLatency, saida: ctx.outputLatency, taxa: ctx.sampleRate,
+                     modo: window.__aura.state.latencia,
+                     taxaEntrada: (window.__aura.audio.stream.getAudioTracks()[0].getSettings() || {}).sampleRate };
+        }""")
+        base = (lat["base"] or 0) * 1000
+        saida = (lat["saida"] or 0) * 1000
+        print(f"   modo {lat['modo']}: buffer {base:.1f} ms, saída {saida:.1f} ms, "
+              f"contexto {(lat['taxa'] or 0) / 1000:.0f} kHz, entrada {(lat['taxaEntrada'] or 0) / 1000:.0f} kHz")
+        if lat["taxa"] and lat["taxaEntrada"]:
+            check(lat["taxa"] == lat["taxaEntrada"], "entrada e processamento na mesma taxa (sem reamostragem)")
+        check(lat["modo"] == "minima", "começa no modo de menor latência")
+        if lat["base"]:
+            check(base <= 12, f"buffer de processamento curto ({base:.1f} ms)")
+        else:
+            print("   (este Chromium sem placa de som não informa o tamanho do buffer)")
+        # a geometria mudou nos testes de tela pequena: refaz antes de clicar
+        box = page.locator("#panel").bounding_box()
+        scale = page.evaluate("() => parseFloat(document.getElementById('panel').dataset.scale)")
+        rotated = page.evaluate("() => document.getElementById('panel').dataset.rotated === 'true'")
+        mx2, my2 = at(lay["menuButton"]["x"] + 13, lay["menuButton"]["y"] + 11)
+        page.mouse.click(mx2, my2)
+        page.wait_for_timeout(600)
+        modos = page.locator("#menu button", has_text="Equilibrada").count()
+        check(modos == 1, "o menu deixa trocar a latência")
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(200)
+
         print("Instalável como app")
         man = page.evaluate("""async () => {
             const link = document.querySelector('link[rel=manifest]');
