@@ -3,8 +3,8 @@ Autor e titular: Thiago Galvão
 Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 Leis 9.609/1998 e 9.610/1998 — a proteção independe de registro.
 
-Gerado em (UTC): 2026-11-13T06:34:56Z
-Commit do repositório: 23c591068fa43a365a26908dccdbc59abb965278
+Gerado em (UTC): 2026-11-13T06:45:34Z
+Commit do repositório: 91157545686a905e682e6d718633678773e504f1
 Arquivos: 46
 
 SHA-256 de cada arquivo:
@@ -14,7 +14,7 @@ ed7c228484cf0d8308e825521b5889de570b979fbfd060644a99b5e418a018ad  .github/workfl
 4043d00f19a8b3cc5944c2c3de17ed3e36187133bab6ccafab1a54f71fde1cfd  AUTORIA.md
 6a1a64b5978b54190618f2d28795a61e6e687da8d4f09c6f86103dd9031f1422  CMakeLists.txt
 9355d790044f95fd15e9d59a26fdc442810f29d7ad146abb5c6d796c3c68d3c6  LICENSE
-75ec8252185301a955651cec8eac6dc8f47a379cdfe2cf38bc56fca96fa3d6c7  README.md
+0255f9fc1b43a6dfc6849833c008fe592f67b0c491119df937fd7f8e9085435a  README.md
 5f2c0cd78e815a16f5167e69c7fcbde8748011af675cb6129f0c6a176457b87e  Resources/ir/cab_1x15.wav
 18b691c2ff4b1978f23fea94b94073961510839897a59c462cdf68688624b957  Resources/ir/cab_4x10.wav
 85a8bd639d1a8e8e9ee49a69257841c9f4df3cf3e336150a346bb5e4f2dc9642  Resources/ui/arcs_lit.png
@@ -37,7 +37,7 @@ e7aae62087ed89d8a3e74175dd4125a449cf65b2ad3c37fa25c1c9fc3b5c00b2  TERCEIROS.md
 ebe7d714122fc7fdf3f9ad6d15c79945a788e85335c57f41fdd102aa70ad0c2d  Tests/DspTest.cpp
 1cb97a87e4fc8e393ef702280cb38639a0f270b4419e4af6748b9faef1c716d6  Tests/pedalboard-ui-test.py
 502c6f961426bf96d77d903ddfeb1da5e16d12271eb483c94c49d10e98f645fc  Tests/web-dsp-test.js
-52127ffe769583d22eaf7709b847f2a8ee7d661e7a78bb54ffd0b9453da12879  Tests/web-ui-test.py
+409d0c823e3deb2a15b647272e8ad91fb57444e3abd14fb22d5fb50776ae2706  Tests/web-ui-test.py
 a5537db14b7262ec697372816e461ab69384bca35c81588cd1a1b4838e57d065  Tools/FootswitchRender/Main.cpp
 63102f994f228c5d8bd9ce4a79776d7d6af6687faf72e22d6e7852f11db99fe7  Tools/autoria-hashes.sh
 bd77cbcb96f1c20d2bf0d39aa4ebab6fd0437b6818dc0b2d3e62ed71f678b2a1  Tools/build-web.sh
@@ -45,20 +45,20 @@ ca7626bc0e261e70fa463ae8508a8df0ce7bab1dc0146ab2bee34ecd834fd0ed  Tools/build_ui
 ffb95917793c105ab113fe9414b69c8c0d90c44963ac6aed67e8e864641e39c1  Tools/make_cab_irs.py
 a82db1dd7ee949c87cc30bcf6683559b023feb8fb9ea60aedcd97a7dae03c192  Tools/versiona-site.py
 27a66fe0410223512589d1b8f3735f97f1fcbb7de27d83f47694fe28167387c7  packaging/Instalar no Mac.command
-c4fafed914ce47749b85368768d170a4a86b2b1f07f63982a7e610510bcf8198  web/app.js
+6b2236e8a9ad263affe1c6b3e6943bfa1e0ce9f040b56b804479a4feef03aad6  web/app.js
 5e0c2605d0e865c1b91f97ad6c7fc6928d81ff135fcbf4bf7a1f3f6950e508fb  web/aura-processor.js
 9f5fe30817f6e3f1a3cc6608513f5dc4369a9af3ca0373643907223be5a0481e  web/icons/icon-192.png
 50d9345cfcbc6cf684a3b7a9c937778691432678244afafe93dbfd8b4a97547b  web/icons/icon-512.png
-94ecb25997caf7fe84030be5353dd03c346c5574ff7ee1c31700b1b79a64cc5b  web/index.html
+932d08cbc9d2a7382c477fe0958204cbdd9739f0e41bb8bb86b813ead6f1a565  web/index.html
 f95d09edd7fccd6fe67c88ed37f9373975e6a33d93fa0ac90cf6e9512c998b4a  web/layout.js
 44a9154fbff1429e371d7a8935f65083f984763061577fcb46e72bc4de37bc92  web/manifest.webmanifest
-b831da2367ea12a3405bafb3808cd9b9df6e0f4c799f7b371fb45ae361b861e3  web/style.css
+7771c5be288bf693f3d58436ffcbba5de47d17031a92ad43faeb833b37e5e9c7  web/style.css
 56009d0da7c76bf877cbb714dbc41139631ce29c39992014a8dcbac5e8155698  web/sw.js
 e960945871ee31fc5289a364b0bfa00850150cd3828ee602e790722bc487aeab  web/tuner.js
 --------------------------------------------------------------------
 
 RESUMO DA OBRA (SHA-256 da lista acima):
-378d6f21283eeb7901f06713b587d6de3077bd2932a3bfb106bbce9a95ee86b2
+3414319fd932e0d371db73d61c397536b1b2359a4ab288e95feac53a414e916f
 
 Esse resumo identifica a obra inteira nesta data. Qualquer alteração em
 qualquer arquivo muda o resumo. Para ter prova de data independente,
