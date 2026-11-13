@@ -5,6 +5,11 @@
 // Licença: ver LICENSE  |  https://github.com/thiagorgalvao-sketch/AURA
 #include "PluginEditor.h"
 #include "Autoria.h"
+
+#if JucePlugin_Build_Standalone
+ // Só no app autônomo: dá acesso aos dispositivos de áudio do sistema.
+ #include <juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h>
+#endif
 #include "BinaryData.h"
 
 namespace
@@ -620,6 +625,25 @@ void AuraPanel::showMainMenu (bool fromButton)
                       "TUNER: afinador (saída muda)" })
         m.addItem (-1, String::fromUTF8 (tip), false);
 
+#if JucePlugin_Build_Standalone
+    m.addSeparator();
+    m.addSectionHeader (String::fromUTF8 ("Áudio"));
+    m.addItem (900, String::fromUTF8 ("Entrada e saída de áudio..."));
+    if (auto* h = juce::StandalonePluginHolder::getInstance())
+    {
+        const bool mudo = (bool) h->getMuteInputValue().getValue();
+        m.addItem (901, String::fromUTF8 (mudo ? "Ligar a entrada (está muda)"
+                                               : "Silenciar a entrada"), true, mudo ? false : true);
+        if (auto* dev = h->deviceManager.getCurrentAudioDevice())
+            m.addItem (-1, dev->getName()
+                           + String::fromUTF8 ("  ·  ") + String (dev->getCurrentBufferSizeSamples())
+                           + String::fromUTF8 (" amostras a ")
+                           + String (dev->getCurrentSampleRate() / 1000.0, 1) + " kHz", false);
+        else
+            m.addItem (-1, String::fromUTF8 ("Nenhum dispositivo de áudio aberto"), false);
+    }
+#endif
+
     m.addSeparator();
     m.addSectionHeader (String::fromUTF8 ("Sobre"));
     for (auto line : { AuraAutoria::obra, AuraAutoria::copyright, AuraAutoria::direitos, AuraAutoria::site })
@@ -630,6 +654,17 @@ void AuraPanel::showMainMenu (bool fromButton)
     m.showMenuAsync (options, [safe = SafePointer<AuraPanel> (this), scales] (int r)
     {
         if (safe == nullptr) return;
+#if JucePlugin_Build_Standalone
+        if (r == 900 || r == 901)
+        {
+            if (auto* h = juce::StandalonePluginHolder::getInstance())
+            {
+                if (r == 900) h->showAudioSettingsDialog();
+                else          h->getMuteInputValue().setValue (! (bool) h->getMuteInputValue().getValue());
+            }
+            return;
+        }
+#endif
         if (r >= 100)
             safe->processor.setCurrentProgram (r - 100);
         else if (r >= 1 && r <= 3 && safe->onScaleChosen)
@@ -656,6 +691,30 @@ AuraBassAudioProcessorEditor::AuraBassAudioProcessorEditor (AuraBassAudioProcess
     : AudioProcessorEditor (&p), processor (p), panel (p)
 {
     addAndMakeVisible (panel);
+
+#if JucePlugin_Build_Standalone
+    // O JUCE deixa a entrada muda por padrão, para um app usado com caixas de
+    // som não microfonar. Num processador de baixo isso significa "não sai som
+    // nenhum": liga-se na primeira execução, e a escolha do usuário vale daí
+    // em diante.
+    if (auto* h = juce::StandalonePluginHolder::getInstance())
+    {
+        if (h->settings != nullptr && ! h->settings->getBoolValue ("auraEntradaLigada", false))
+        {
+            h->getMuteInputValue().setValue (false);
+            h->settings->setValue ("auraEntradaLigada", true);
+
+            juce::NativeMessageBox::showMessageBoxAsync (
+                juce::MessageBoxIconType::InfoIcon,
+                String::fromUTF8 ("Entrada de áudio ligada"),
+                String::fromUTF8 (
+                    "O AURA Bass vai processar o que chegar pela entrada de áudio.\n\n"
+                    "Use fones de ouvido: com caixas de som, o som volta pela entrada e microfona.\n\n"
+                    "Para escolher a interface, abra o menu do painel e use \"Entrada e saída de áudio\"."));
+        }
+    }
+#endif
+
     panel.onScaleChosen = [this] (float s) { setScale (s); };
     panel.onParameterContextMenu = [this] (RangedAudioParameter& param) { showHostMenu (param); };
     setScale (processor.getUiScale());

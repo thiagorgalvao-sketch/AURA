@@ -54,7 +54,11 @@ juce_add_plugin(AuraBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD     FALSE
     VST3_CATEGORIES             Fx Distortion
-    AU_MAIN_TYPE                kAudioUnitType_Effect)
+    AU_MAIN_TYPE                kAudioUnitType_Effect
+    # Sem isto, o macOS não entrega a entrada de áudio ao app autônomo: ele abre,
+    # mas processa silêncio. A frase aparece na janela de permissão do sistema.
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT  "O AURA Bass precisa da entrada de áudio para processar o som do seu instrumento.")
 
 # Imagens da interface (montadas por Tools/build_ui_assets.py a partir de Resources/mockup)
 juce_add_binary_data(AuraAssets SOURCES

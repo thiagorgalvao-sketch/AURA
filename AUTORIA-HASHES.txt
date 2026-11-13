@@ -3,8 +3,8 @@ Autor e titular: Thiago Galvão
 Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
 Leis 9.609/1998 e 9.610/1998 — a proteção independe de registro.
 
-Gerado em (UTC): 2026-11-13T07:16:18Z
-Commit do repositório: b571c426a3eb3001ba6c59219e0ff6ae0c1edbb2
+Gerado em (UTC): 2026-11-13T14:01:50Z
+Commit do repositório: f8f5ed2efba73f1078bb2354faee9280a7d50491
 Arquivos: 46
 
 SHA-256 de cada arquivo:
@@ -12,7 +12,7 @@ SHA-256 de cada arquivo:
 21f566db8d5757f7684e917e5624b6697308ce39c78d6f614c2e4cbabff54277  .github/workflows/build.yml
 ed7c228484cf0d8308e825521b5889de570b979fbfd060644a99b5e418a018ad  .github/workflows/pages.yml
 4043d00f19a8b3cc5944c2c3de17ed3e36187133bab6ccafab1a54f71fde1cfd  AUTORIA.md
-6a1a64b5978b54190618f2d28795a61e6e687da8d4f09c6f86103dd9031f1422  CMakeLists.txt
+c286c73e99b200d114b0440fa9e220d4534e9904fe1cb45d60223a63df1a7d78  CMakeLists.txt
 9355d790044f95fd15e9d59a26fdc442810f29d7ad146abb5c6d796c3c68d3c6  LICENSE
 a3f5b07f5d976c28930355a253d909e02f5a9bc286a51800fa4f5cd7357d0371  README.md
 5f2c0cd78e815a16f5167e69c7fcbde8748011af675cb6129f0c6a176457b87e  Resources/ir/cab_1x15.wav
@@ -28,7 +28,7 @@ b04ecd6b957c75890593883fee8a778669d4b9c21cb2f116c044f6c338b70eb9  Resources/ui/l
 07a1e587e501af8f094da2b0b7fd06646890168a391998d0844d699226aaef43  Resources/ui/tuner_down.png
 93ec78f1d71597c05832290e3baaf4b93773f9b69096e0628d4e99e50f7f2231  Source/Autoria.h
 a98a80c3e0e51401aeff9f719f0ce2bfaa4701ffa4c3beb5066892ca9391d0a3  Source/Layout.h
-c1d0c0456b726cd9788a05ff494f22e4dca708268cfb4b88feaaa78634b86fd6  Source/PluginEditor.cpp
+bc02b1d24e443d75a4f98754fd3f6df068c3e71ddd7e64b0914a5bd61e5108fc  Source/PluginEditor.cpp
 1017dd6b17cd6b9c635f2f6aeeb963d6d10d34d4d5877a4a0d87d92554ceb4b1  Source/PluginEditor.h
 b8341cfe759099d9a2041142363f7f843b6a4fb8a3da96720f8de00d1362fced  Source/PluginProcessor.cpp
 0f106f650cf68b9205ae0ca09f2f930834eac5892c14840aae06011e760dc3e3  Source/PluginProcessor.h
@@ -58,7 +58,7 @@ e960945871ee31fc5289a364b0bfa00850150cd3828ee602e790722bc487aeab  web/tuner.js
 --------------------------------------------------------------------
 
 RESUMO DA OBRA (SHA-256 da lista acima):
-e0cae334a84f833a3eecdcae3e62064d9c568c04fb1e0b9ae280cfbf95220a74
+93098c43586e3fea666a00c7cab72f2d949d8a8aeaa4e95ffe894bfb00fcb676
 
 Esse resumo identifica a obra inteira nesta data. Qualquer alteração em
 qualquer arquivo muda o resumo. Para ter prova de data independente,
