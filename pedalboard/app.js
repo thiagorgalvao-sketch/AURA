@@ -389,8 +389,60 @@ async function carregaIR(c) {
   } catch (e) { return null; }
 }
 
-async function liga() {
-  const entrada = await navigator.mediaDevices.getUserMedia(restricoes(estado.entradaId));
+function pareceMicrofoneInterno(label) {
+  return /micro|microphone|interno|internal|built-?in|embutid|padr[ãa]o|default/i.test(label || '');
+}
+
+/** Passo 1: pede a permissão (sem usar o áudio) e lista as entradas. */
+async function escolheEntrada() {
+  const nota = $('#notaInicio'), caixa = $('#escolhaEntrada'), sel = $('#entradaSelect');
+  nota.textContent = 'Pedindo acesso ao áudio...';
+  try {
+    const permissao = await navigator.mediaDevices.getUserMedia({ audio: true });
+    permissao.getTracks().forEach((t) => t.stop());
+
+    const entradas = (await navigator.mediaDevices.enumerateDevices())
+      .filter((d) => d.kind === 'audioinput');
+    if (!entradas.length) {
+      nota.textContent = 'Nenhuma entrada encontrada. Ligue a interface e toque em Ligar de novo.';
+      $('#botaoLigar').disabled = false;
+      return;
+    }
+
+    const salva = entradas.find((d) => d.deviceId === estado.entradaId);
+    if (salva) { await liga(salva.deviceId); return; }
+
+    sel.innerHTML = '';
+    const vazio = document.createElement('option');
+    vazio.value = ''; vazio.textContent = 'Escolha a entrada…';
+    sel.appendChild(vazio);
+    entradas.forEach((d, i) => {
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label || `Entrada ${i + 1}`;
+      sel.appendChild(o);
+    });
+    const externas = entradas.filter((d) => !pareceMicrofoneInterno(d.label));
+    if (externas.length === 1) sel.value = externas[0].deviceId;
+
+    $('#entrarButton').disabled = !sel.value;
+    $('#botaoLigar').hidden = true;
+    caixa.hidden = false;
+    nota.textContent = estado.entradaId
+      ? 'A entrada usada antes não está mais ligada. Escolha outra.'
+      : 'Escolha por onde o baixo entra.';
+  } catch (e) {
+    $('#botaoLigar').disabled = false;
+    nota.textContent = (e && e.name) === 'NotAllowedError'
+      ? 'Acesso negado. Libere o microfone nas permissões do site e tente de novo.'
+      : 'Não consegui acessar o áudio: ' + ((e && e.message) || e);
+  }
+}
+
+/** Passo 2: abre a entrada escolhida e monta a cadeia. */
+async function liga(deviceId) {
+  const entrada = await navigator.mediaDevices.getUserMedia(restricoes(deviceId));
+  estado.entradaId = deviceId || '';
 
   ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
   await ctx.audioWorklet.addModule('pb-processor.js');
@@ -414,6 +466,8 @@ async function liga() {
   estado.entradaNome = nomeDaEntrada(entrada);
   await aplicaSaida(estado.saidaId);
 
+  salva();
+  $('#escolhaEntrada').hidden = true;
   $('#inicio').hidden = true;
   const atraso = Math.round((ctx.baseLatency + (ctx.outputLatency || 0)) * 1000);
   mostra(`Entrando por: ${estado.entradaNome || 'entrada padrão'} · ${atraso} ms`
@@ -478,13 +532,18 @@ function medeEntrada() {
   requestAnimationFrame(medeEntrada);
 }
 
-$('#botaoLigar').onclick = async () => {
-  $('#botaoLigar').disabled = true;
+$('#botaoLigar').onclick = () => { $('#botaoLigar').disabled = true; escolheEntrada(); };
+$('#entradaSelect').onchange = () => { $('#entrarButton').disabled = !$('#entradaSelect').value; };
+$('#entrarButton').onclick = async () => {
+  $('#entrarButton').disabled = true;
+  $('#notaInicio').textContent = 'Abrindo a entrada...';
   try {
-    await liga();
+    await liga($('#entradaSelect').value);
   } catch (e) {
-    $('#botaoLigar').disabled = false;
-    mostra('Não consegui abrir a entrada de áudio: ' + (e && e.message ? e.message : e), 6000);
+    $('#entrarButton').disabled = false;
+    $('#notaInicio').textContent = ['NotFoundError', 'OverconstrainedError'].includes(e && e.name)
+      ? 'Essa entrada não está mais disponível. Escolha outra na lista.'
+      : 'Não consegui abrir essa entrada: ' + ((e && e.message) || e);
   }
 };
 

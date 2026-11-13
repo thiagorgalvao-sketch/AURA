@@ -37,11 +37,17 @@
     <h1>AURA <span>BASS</span></h1>
     <p class="sub">Overdrive de baixo com afinador, direto no navegador.</p>
     <ol class="steps">
-      <li>Ligue o baixo na entrada de áudio do aparelho (interface, adaptador ou microfone).</li>
-      <li><strong>Use fones de ouvido.</strong> Sem fones, o som da caixa volta pelo microfone e apita.</li>
-      <li>Toque em Ligar e permita o acesso ao áudio quando o navegador pedir.</li>
+      <li>Ligue o baixo na sua interface de áudio e conecte a interface ao aparelho.</li>
+      <li><strong>Use fones de ouvido.</strong> Sem fones, o som da caixa volta pela entrada e apita.</li>
+      <li>Toque em Ligar, permita o acesso ao áudio e escolha a sua interface na lista.</li>
     </ol>
     <button id="startButton" class="primary">Ligar</button>
+    <div id="escolhaEntrada" hidden>
+      <label for="entradaSelect">Entrada de áudio</label>
+      <select id="entradaSelect"></select>
+      <button id="entrarButton" class="primary" disabled>Entrar</button>
+      <button id="outraEntradaButton" class="secundario" hidden>Usar outra entrada</button>
+    </div>
     <p id="startNote" class="note"></p>
   </div>
 </div>

@@ -104,6 +104,10 @@ const menuEl = document.getElementById('menu');
 const startOverlay = document.getElementById('start');
 const startButton = document.getElementById('startButton');
 const startNote = document.getElementById('startNote');
+const escolhaEl = document.getElementById('escolhaEntrada');
+const entradaSelect = document.getElementById('entradaSelect');
+const entrarButton = document.getElementById('entrarButton');
+const outraEntradaButton = document.getElementById('outraEntradaButton');
 const toastEl = document.getElementById('toast');
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -210,6 +214,12 @@ async function setIr(index, custom) {
   }
 }
 
+/** Parece uma entrada embutida do aparelho? Serve só para não sugerir essas. */
+function pareceMicrofoneInterno(label) {
+  return /micro|microphone|interno|internal|built-?in|embutid|padr[ãa]o|default/i.test(label || '');
+}
+
+/** Passo 1: pede a permissão (sem usar o áudio) e lista as entradas. */
 async function start() {
   startButton.disabled = true;
   startNote.textContent = 'Pedindo acesso ao áudio...';
@@ -217,15 +227,70 @@ async function start() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
       throw new Error('Este navegador não dá acesso à entrada de áudio.');
 
+    // Abre e fecha na hora: serve só para o navegador liberar os nomes das
+    // entradas. Nada é ligado ao processamento neste momento.
+    const permissao = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    permissao.getTracks().forEach((t) => t.stop());
+
+    const entradas = (await navigator.mediaDevices.enumerateDevices())
+      .filter((d) => d.kind === 'audioinput');
+
+    if (!entradas.length) {
+      startButton.disabled = false;
+      startNote.textContent = 'Nenhuma entrada encontrada. Ligue a interface e toque em Ligar de novo.';
+      return;
+    }
+
+    // Se já havia uma entrada escolhida e ela continua ligada, entra direto.
+    const salva = entradas.find((d) => d.deviceId === state.inputDeviceId);
+    if (salva) { await iniciaAudio(salva.deviceId); return; }
+
+    entradaSelect.innerHTML = '';
+    const vazio = document.createElement('option');
+    vazio.value = '';
+    vazio.textContent = 'Escolha a entrada…';
+    entradaSelect.appendChild(vazio);
+    entradas.forEach((d, i) => {
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label || `Entrada ${i + 1}`;
+      entradaSelect.appendChild(o);
+    });
+
+    const externas = entradas.filter((d) => !pareceMicrofoneInterno(d.label));
+    if (externas.length === 1) entradaSelect.value = externas[0].deviceId;
+
+    entrarButton.disabled = !entradaSelect.value;
+    startButton.hidden = true;
+    escolhaEl.hidden = false;
+    startNote.textContent = state.inputDeviceId
+      ? 'A entrada usada antes não está mais ligada. Escolha outra.'
+      : 'Escolha por onde o baixo entra. O microfone do aparelho só funciona bem com fones.';
+  } catch (err) {
+    startButton.disabled = false;
+    const name = err && err.name;
+    startNote.textContent =
+      name === 'NotAllowedError' ? 'Acesso negado. Libere o microfone nas permissões do site e toque em Ligar de novo.'
+      : name === 'NotFoundError' ? 'Nenhuma entrada de áudio encontrada. Ligue a interface e tente de novo.'
+      : (err && err.message) || 'Não consegui acessar o áudio.';
+  }
+}
+
+/** Passo 2: abre a entrada escolhida e monta o processamento. */
+async function iniciaAudio(deviceId) {
+  entrarButton.disabled = true;
+  startNote.textContent = 'Abrindo a entrada...';
+  try {
     const constraints = {
       audio: {
         echoCancellation: false, noiseSuppression: false, autoGainControl: false,
         channelCount: { ideal: 2 },
-        ...(state.inputDeviceId ? { deviceId: { exact: state.inputDeviceId } } : {}),
+        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
       },
       video: false,
     };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    state.inputDeviceId = deviceId || '';
 
     const ctxAudio = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     await ctxAudio.resume();
@@ -260,6 +325,8 @@ async function start() {
     await setIr(state.irIndex >= 0 ? state.irIndex : 0);
 
     state.running = true;
+    saveState();
+    escolhaEl.hidden = true;
     startOverlay.classList.add('hidden');
     paint();
 
@@ -274,12 +341,14 @@ async function start() {
       t.onended = () => toast('A entrada de áudio foi desconectada. Recarregue a página.', 6000);
     });
   } catch (err) {
-    startButton.disabled = false;
+    entrarButton.disabled = false;
+    escolhaEl.hidden = false;
     const name = err && err.name;
     startNote.textContent =
-      name === 'NotAllowedError' ? 'Acesso negado. Libere o microfone nas permissões do site e toque em Ligar de novo.'
-      : name === 'NotFoundError' ? 'Nenhuma entrada de áudio encontrada. Ligue a interface ou o adaptador e tente de novo.'
-      : (err && err.message) || 'Não consegui iniciar o áudio.';
+      name === 'NotAllowedError' ? 'Acesso negado. Libere o microfone nas permissões do site e tente de novo.'
+      : name === 'NotFoundError' || name === 'OverconstrainedError'
+        ? 'Essa entrada não está mais disponível. Escolha outra na lista.'
+      : (err && err.message) || 'Não consegui abrir essa entrada.';
   }
 }
 
@@ -998,6 +1067,16 @@ async function init() {
 
   if (!window.isSecureContext) startNote.textContent = 'O navegador só libera a entrada de áudio em páginas seguras (https).';
   startButton.addEventListener('click', start);
+  entradaSelect.addEventListener('change', () => { entrarButton.disabled = !entradaSelect.value; });
+  entrarButton.addEventListener('click', () => iniciaAudio(entradaSelect.value));
+  outraEntradaButton.addEventListener('click', () => {
+    state.inputDeviceId = '';
+    saveState();
+    escolhaEl.hidden = true;
+    startButton.hidden = false;
+    startButton.disabled = false;
+    start();
+  });
 
   if ('serviceWorker' in navigator) {
     try { await navigator.serviceWorker.register('sw.js'); } catch (e) { /* offline não disponível */ }

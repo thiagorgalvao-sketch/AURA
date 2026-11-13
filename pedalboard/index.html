@@ -42,9 +42,15 @@
 <div id="inicio">
   <div class="caixa">
     <h1>WORSHIP BASS ESSENTIALS</h1>
-    <p>Os oito presets do seu MainStage, rodando no navegador.</p>
+    <p>Os oito presets do seu MainStage, rodando no navegador. Ligue o baixo na sua interface de áudio e escolha-a na lista.</p>
     <button id="botaoLigar">Ligar</button>
-    <p class="aviso">Use fone de ouvido. Sem fone, o som volta pelo microfone e microfona.</p>
+    <div id="escolhaEntrada" hidden>
+      <label for="entradaSelect">Entrada de áudio</label>
+      <select id="entradaSelect"></select>
+      <button id="entrarButton" disabled>Entrar</button>
+    </div>
+    <p id="notaInicio" class="aviso"></p>
+    <p class="aviso">Use fone de ouvido. Sem fone, o som volta pela entrada e microfona.</p>
   </div>
 </div>
 

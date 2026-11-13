@@ -93,8 +93,10 @@ processamento do plugin:
 
 **https://thiagorgalvao-sketch.github.io/AURA/**
 
-Abra o endereço, toque em **Ligar** e autorize o microfone (ou a interface de
-áudio). Funciona no Chrome, no Edge e no Safari.
+Abra o endereço, toque em **Ligar**, autorize o acesso ao áudio e **escolha a
+sua interface na lista**. O app não usa o microfone do aparelho por conta
+própria: a entrada é sempre a que você escolher, e a escolha fica guardada para
+as próximas vezes. Funciona no Chrome, no Edge e no Safari.
 
 - **Ligue no fone de ouvido.** Sem fone, o som da caixa volta para o microfone
   e microfona.

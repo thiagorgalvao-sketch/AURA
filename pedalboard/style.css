@@ -138,6 +138,16 @@ html, body {
 #inicio h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .1em; }
 #inicio p { color: var(--apagado); font-size: 13.5px; }
 #inicio .aviso { font-size: 12px; margin-top: 14px; }
+#escolhaEntrada { display: grid; gap: 9px; margin-top: 12px; text-align: left; }
+#escolhaEntrada label { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--apagado); }
+#escolhaEntrada select, #escolhaEntrada button {
+  width: 100%; padding: 11px; font: inherit;
+  background: #0f1116; color: var(--texto);
+  border: 1px solid var(--linha); border-radius: 9px; cursor: pointer;
+}
+#escolhaEntrada button { background: var(--metal); color: #0d0e11; font-weight: 700; border: 0; }
+#escolhaEntrada button:disabled { background: #272b33; color: var(--apagado); cursor: default; }
+
 #botaoLigar {
   margin-top: 14px; padding: 13px 34px; font-size: 15px; font-weight: 700;
   color: #0d0e11; background: var(--metal); border: 0; border-radius: 10px; cursor: pointer;

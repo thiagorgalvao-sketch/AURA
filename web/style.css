@@ -108,6 +108,19 @@ html, body {
 }
 
 /* ---- Tela inicial -------------------------------------------------------- */
+#escolhaEntrada { display: grid; gap: 9px; margin-top: 4px; text-align: left; }
+#escolhaEntrada label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #8d949d; }
+#escolhaEntrada select {
+  width: 100%; padding: 11px; font: inherit;
+  background: #11141a; color: #dfe3e9; border: 1px solid #333942; border-radius: 9px;
+}
+#escolhaEntrada button.primary { width: 100%; }
+#escolhaEntrada button.primary:disabled { opacity: .4; cursor: default; }
+#escolhaEntrada button.secundario {
+  width: 100%; padding: 9px; font: inherit; cursor: pointer;
+  background: none; color: #8d949d; border: 1px solid #2c323a; border-radius: 9px;
+}
+
 .overlay {
   position: fixed;
   inset: 0;

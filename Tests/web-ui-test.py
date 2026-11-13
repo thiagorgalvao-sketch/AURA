@@ -91,8 +91,25 @@ def main():
         check(not errors, f"sem erros no console: {errors[:2]}")
         page.screenshot(path=f"{OUT}/1-inicio.png")
 
-        print("Início do áudio")
+        print("Escolha da entrada antes de ligar")
         page.click("#startButton")
+        page.wait_for_timeout(1500)
+        check(page.is_visible("#escolhaEntrada"), "a lista de entradas aparece")
+        check(page.evaluate("() => document.getElementById('start').classList.contains('hidden')") is False,
+              "o áudio NÃO começa sozinho no microfone do aparelho")
+        opcoes = page.eval_on_selector_all("#entradaSelect option", "els => els.map(e => e.textContent)")
+        print("   entradas:", ", ".join(opcoes))
+        check(len(opcoes) > 1, "as entradas do sistema estão na lista")
+        check(opcoes[0].startswith("Escolha"), "nenhuma entrada vem marcada por engano")
+        page.screenshot(path=f"{OUT}/1b-escolha-entrada.png")
+
+        print("Início do áudio")
+        escolhido = page.eval_on_selector_all(
+            "#entradaSelect option", "els => els.filter(e => e.value)[0].value")
+        page.select_option("#entradaSelect", escolhido)
+        check(page.evaluate("() => !document.getElementById('entrarButton').disabled"),
+              "o botão Entrar libera depois da escolha")
+        page.click("#entrarButton")
         page.wait_for_timeout(2500)
         started = page.evaluate("() => document.getElementById('start').classList.contains('hidden')")
         check(started, "áudio iniciou e a tela inicial sumiu")
@@ -207,7 +224,9 @@ def main():
 
         print("Telas pequenas (celular em pé e deitado)")
         page.click("#startButton")           # religa o áudio depois do recarregamento
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(2500)
+        check(page.evaluate("() => document.getElementById('start').classList.contains('hidden')"),
+              "com a entrada já escolhida, entra direto sem perguntar de novo")
         for name, w, h in [("celular-deitado", 844, 390), ("celular-em-pe", 390, 844), ("tablet", 1024, 768)]:
             page.set_viewport_size({"width": w, "height": h})
             page.wait_for_timeout(400)

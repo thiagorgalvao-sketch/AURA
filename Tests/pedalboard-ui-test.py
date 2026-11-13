@@ -106,8 +106,20 @@ def main():
         check(not erros, f"sem erros no console: {erros[:2]}")
         page.screenshot(path=f"{OUT}/1-inicio.png")
 
-        print("Início do áudio")
+        print("Escolha da entrada antes de ligar")
         page.click("#botaoLigar")
+        page.wait_for_timeout(1500)
+        check(page.is_visible("#escolhaEntrada"), "a lista de entradas aparece")
+        check(page.evaluate("() => document.getElementById('inicio').hidden") is False,
+              "o áudio NÃO começa sozinho no microfone do aparelho")
+        opcoes = page.eval_on_selector_all("#entradaSelect option", "els => els.map(e => e.textContent)")
+        print("   entradas:", ", ".join(opcoes))
+        check(len(opcoes) > 1, "as entradas do sistema estão na lista")
+
+        print("Início do áudio")
+        escolhido = page.eval_on_selector_all("#entradaSelect option", "els => els.filter(e => e.value)[0].value")
+        page.select_option("#entradaSelect", escolhido)
+        page.click("#entrarButton")
         page.wait_for_timeout(2500)
         check(page.evaluate("() => document.getElementById('inicio').hidden"), "áudio iniciou")
         estado_ctx = page.evaluate("() => window.__pb.audio && window.__pb.audio.state")
