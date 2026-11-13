@@ -105,9 +105,11 @@ as próximas vezes. Funciona no Chrome, no Edge e no Safari.
   recarregar. Ao ligar, o aviso na tela diz por qual entrada o som está entrando
   — se aparecer o microfone do computador, é só trocar ali. Pelo microfone do
   celular também funciona, mas com menos graves.
-- **Instalar como app:** no Chrome, menu > *Instalar aplicativo*; no iPhone,
-  *Compartilhar > Adicionar à Tela de Início*. Depois de instalado, abre sem
-  internet e sem a barra do navegador.
+- **Instalar como app:** há um botão **Instalar como app** na tela inicial e no
+  menu (≡). No Chrome e no Edge ele instala direto; no iPhone e no iPad, o
+  próprio Safari exige *Compartilhar > Adicionar à Tela de Início*, e o botão
+  mostra esse caminho. Instalado, o AURA abre em tela cheia e deitado, sem a
+  barra do navegador, e funciona sem internet.
 - **Celular em pé:** o painel gira sozinho para ocupar a tela inteira.
 - **Latência:** depende do aparelho — num computador fica em torno de 20 a 40 ms;
   no celular costuma ser maior. Para tocar ao vivo, o plugin (VST3/AU) continua

@@ -276,6 +276,25 @@ def main():
         page.set_viewport_size({"width": 1280, "height": 720})
         page.wait_for_timeout(300)
 
+        print("Instalável como app")
+        man = page.evaluate("""async () => {
+            const link = document.querySelector('link[rel=manifest]');
+            if (!link) return null;
+            const r = await fetch(link.href);
+            const m = await r.json();
+            return { nome: m.name, display: m.display, orient: m.orientation,
+                     inicio: m.start_url, icones: (m.icons || []).length,
+                     mascara: (m.icons || []).some((i) => (i.purpose || '').includes('maskable')),
+                     temBotao: !!document.getElementById('instalarButton'),
+                     temApple: !!document.querySelector('link[rel="apple-touch-icon"]') };
+        }""")
+        print(f"   manifesto: {man}")
+        check(bool(man) and man["nome"] and man["icones"] >= 2, "manifesto válido com ícones")
+        check(man and man["display"] in ("standalone", "fullscreen"), "abre sem a barra do navegador")
+        check(man and man["mascara"], "tem ícone adaptável (Android)")
+        check(man and man["temApple"], "tem ícone para iPhone e iPad")
+        check(man and man["temBotao"], "o botão de instalar existe na tela inicial")
+
         print("Funciona sem internet")
         page.set_viewport_size({"width": 1280, "height": 720})
         page.wait_for_timeout(300)

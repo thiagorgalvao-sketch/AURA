@@ -108,6 +108,7 @@ const escolhaEl = document.getElementById('escolhaEntrada');
 const entradaSelect = document.getElementById('entradaSelect');
 const entrarButton = document.getElementById('entrarButton');
 const outraEntradaButton = document.getElementById('outraEntradaButton');
+const instalarButton = document.getElementById('instalarButton');
 const toastEl = document.getElementById('toast');
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -213,6 +214,50 @@ async function setIr(index, custom) {
     toast('Não consegui carregar essa resposta de impulso.');
   }
 }
+
+// ---------------------------------------------------------------------------
+// Instalar como app (atalho na tela de início, abrindo em tela cheia)
+// ---------------------------------------------------------------------------
+
+let convite = null;   // o convite de instalação que o navegador oferece
+
+function jaInstalado() {
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.matchMedia('(display-mode: fullscreen)').matches
+      || navigator.standalone === true;
+}
+
+function ehApple() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function podeInstalar() { return !jaInstalado() && (convite !== null || ehApple()); }
+
+async function instala() {
+  if (convite) {
+    convite.prompt();
+    const r = await convite.userChoice.catch(() => null);
+    convite = null;
+    atualizaInstalar();
+    if (r && r.outcome === 'accepted') toast('Instalado. Abra pelo ícone na tela de início.', 5000);
+    return;
+  }
+  toast(ehApple()
+    ? 'No iPhone ou iPad: toque em Compartilhar (o quadradinho com a seta) e em "Adicionar à Tela de Início".'
+    : 'No menu do navegador, procure "Instalar aplicativo" ou "Adicionar à tela inicial".', 8000);
+}
+
+function atualizaInstalar() {
+  if (instalarButton) instalarButton.hidden = !podeInstalar();
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  convite = e;
+  atualizaInstalar();
+});
+window.addEventListener('appinstalled', () => { convite = null; atualizaInstalar(); });
 
 /** Parece uma entrada embutida do aparelho? Serve só para não sugerir essas. */
 function pareceMicrofoneInterno(label) {
@@ -997,6 +1042,16 @@ async function openMenu(ev, section) {
     menuEl.appendChild(version);
 
     menuEl.appendChild(document.createElement('hr'));
+    if (podeInstalar()) {
+      menuEl.appendChild(document.createElement('hr'));
+      menuEl.appendChild(menuHeader('Atalho'));
+      menuEl.appendChild(menuItem('Instalar como app', () => { closeMenu(); instala(); }));
+      const t = document.createElement('div');
+      t.className = 'tip';
+      t.textContent = 'Abre em tela cheia, sem a barra do navegador, e funciona sem internet.';
+      menuEl.appendChild(t);
+    }
+
     menuEl.appendChild(menuHeader('Sobre'));
     {
       const v = document.createElement('div');
@@ -1067,6 +1122,8 @@ async function init() {
 
   if (!window.isSecureContext) startNote.textContent = 'O navegador só libera a entrada de áudio em páginas seguras (https).';
   startButton.addEventListener('click', start);
+  if (instalarButton) instalarButton.addEventListener('click', instala);
+  atualizaInstalar();
   entradaSelect.addEventListener('change', () => { entrarButton.disabled = !entradaSelect.value; });
   entrarButton.addEventListener('click', () => iniciaAudio(entradaSelect.value));
   outraEntradaButton.addEventListener('click', () => {
