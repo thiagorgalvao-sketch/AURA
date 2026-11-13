@@ -1,0 +1,15 @@
+AURA Bass — versão para navegador
+Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+
+Obra protegida pelas Leis 9.609/1998 (Lei do Software) e 9.610/1998 (Direitos
+Autorais) e, no exterior, pela Convenção de Berna. Uso pessoal permitido;
+cópia, redistribuição, hospedagem em outro endereço ou obra derivada apenas
+com autorização por escrito do autor. Veja LICENSE.txt.
+
+Origem oficial: https://thiagorgalvao-sketch.github.io/AURA/
+Código: https://github.com/thiagorgalvao-sketch/AURA
+
+AURA-PROV/1 obra=AURA-Bass autor=Thiago-Galvao ano=2026
+lei=9609/1998+9610/1998 direitos=reservados
+
+Fontes Roboto e Russo One sob a SIL Open Font License (assets/OFL-*.txt).

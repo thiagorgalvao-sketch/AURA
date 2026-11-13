@@ -1,0 +1,90 @@
+AURA BASS — LICENÇA DE USO
+Copyright © 2026 Thiago Galvão. Todos os direitos reservados.
+
+Autor e titular: Thiago Galvão (GitHub: thiagorgalvao-sketch)
+Obra: AURA Bass — plugin de overdrive e pré-amplificador para baixo, com
+afinador, simulação de alto-falante e versão para navegador.
+Criação iniciada em 23 de outubro de 2026.
+Repositório oficial: https://github.com/thiagorgalvao-sketch/AURA
+
+--------------------------------------------------------------------------
+1. DIREITOS DO AUTOR
+
+Este programa é obra intelectual protegida pela Lei nº 9.609/1998 (Lei do
+Software) e pela Lei nº 9.610/1998 (Lei de Direitos Autorais). A proteção
+independe de registro e nasce com a criação da obra (art. 2º, § 3º, da Lei
+nº 9.609/1998), valendo também no exterior pela Convenção de Berna.
+
+Todos os direitos patrimoniais e morais sobre o código-fonte, o som, o
+desenho da interface, as imagens, os nomes "AURA" e "AURA Bass" e a
+documentação pertencem exclusivamente a Thiago Galvão.
+
+2. O QUE É PERMITIDO
+
+a) Usar o programa, nas versões compilada e para navegador, para fins
+   pessoais, de estudo e em apresentações musicais, sem custo.
+b) Ler o código-fonte publicado neste repositório para estudo.
+c) Fazer cópias de segurança para uso próprio.
+
+3. O QUE NÃO É PERMITIDO SEM AUTORIZAÇÃO POR ESCRITO DO AUTOR
+
+a) Redistribuir, revender, sublicenciar, hospedar ou disponibilizar o
+   programa, no todo ou em parte, por qualquer meio.
+b) Copiar, adaptar ou reaproveitar o código-fonte, o desenho da interface
+   ou os recursos gráficos e sonoros em outra obra, inclusive em obra
+   derivada.
+c) Usar os nomes "AURA" e "AURA Bass", o logotipo ou a identidade visual
+   em outro produto.
+d) Remover, alterar ou ocultar os avisos de autoria presentes no código,
+   nos arquivos e na interface do programa.
+e) Qualquer uso comercial.
+
+A publicação do código-fonte neste repositório serve à transparência, ao
+estudo e ao registro público da autoria. Não constitui licença de uso
+livre, nem autorização para cópia ou obra derivada, nem renúncia a
+qualquer direito.
+
+4. GARANTIA
+
+O programa é fornecido "no estado em que se encontra", sem garantia de
+qualquer natureza. O autor não responde por danos decorrentes do uso.
+
+5. COMPONENTES DE TERCEIROS
+
+Esta obra usa componentes de terceiros, cada um sob a sua própria licença,
+relacionados no arquivo TERCEIROS.md. As licenças desses componentes se
+aplicam somente a eles, e não às partes criadas pelo autor.
+
+6. CONTATO
+
+Pedidos de autorização, licenciamento ou parceria: abra uma issue em
+https://github.com/thiagorgalvao-sketch/AURA/issues
+
+==========================================================================
+
+AURA BASS — LICENCE (English summary)
+Copyright © 2026 Thiago Galvão. All rights reserved.
+
+This software, its source code, user interface design, artwork, sound
+design and the names "AURA" and "AURA Bass" are the exclusive property of
+Thiago Galvão and are protected by Brazilian Law 9.609/1998 and 9.610/1998
+and, internationally, by the Berne Convention.
+
+Permitted: personal, educational and live-performance use of the compiled
+and browser versions, free of charge; reading the source code for study.
+
+Not permitted without the author's prior written consent: redistribution,
+resale, sublicensing, hosting or making the software available; copying,
+adapting or reusing the source code, interface design or assets in any
+other work, including derivative works; use of the "AURA" / "AURA Bass"
+names or visual identity; removal or alteration of the authorship notices;
+any commercial use.
+
+Publishing the source code here is for transparency, study and public
+record of authorship. It is not an open-source licence and waives no
+rights.
+
+The software is provided "as is", without warranty of any kind.
+
+Third-party components are listed in TERCEIROS.md and remain under their
+own licences.

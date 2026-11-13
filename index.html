@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f1012">
+<meta name="description" content="AURA Bass — overdrive de baixo com afinador, direto no navegador.">
+<meta name="author" content="Thiago Galvão">
+<meta name="copyright" content="Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.">
+<link rel="license" href="https://github.com/thiagorgalvao-sketch/AURA/blob/main/LICENSE">
+<!--
+  AURA Bass — Copyright (c) 2026 Thiago Galvão. Todos os direitos reservados.
+  Obra protegida pelas Leis 9.609/1998 e 9.610/1998 e pela Convenção de Berna.
+  Uso pessoal permitido; cópia, redistribuição, hospedagem em outro endereço ou
+  obra derivada apenas com autorização por escrito do autor.
+  AURA-PROV/1 obra=AURA-Bass autor=Thiago-Galvao ano=2026
+-->
+<title>AURA Bass</title>
+<link rel="manifest" href="manifest.webmanifest?v=ea6b6d7">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="style.css?v=ea6b6d7">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="panel" aria-label="Painel do AURA Bass"></canvas>
+  <input id="valueInput" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" hidden>
+</main>
+
+<div id="menu" class="sheet" hidden></div>
+
+<div id="start" class="overlay">
+  <div class="card">
+    <h1>AURA <span>BASS</span></h1>
+    <p class="sub">Overdrive de baixo com afinador, direto no navegador.</p>
+    <ol class="steps">
+      <li>Ligue o baixo na sua interface de áudio e conecte a interface ao aparelho.</li>
+      <li><strong>Use fones de ouvido.</strong> Sem fones, o som da caixa volta pela entrada e apita.</li>
+      <li>Toque em Ligar, permita o acesso ao áudio e escolha a sua interface na lista.</li>
+    </ol>
+    <button id="startButton" class="primary">Ligar</button>
+    <div id="escolhaEntrada" hidden>
+      <label for="entradaSelect">Entrada de áudio</label>
+      <select id="entradaSelect"></select>
+      <button id="entrarButton" class="primary" disabled>Entrar</button>
+      <button id="outraEntradaButton" class="secundario" hidden>Usar outra entrada</button>
+    </div>
+    <p id="startNote" class="note"></p>
+    <button id="instalarButton" class="secundario" hidden>Instalar como app</button>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="layout.js?v=ea6b6d7"></script>
+<script src="tuner.js?v=ea6b6d7"></script>
+<script src="app.js?v=ea6b6d7"></script>
+</body>
+</html>
