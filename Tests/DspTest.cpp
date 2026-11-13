@@ -133,6 +133,41 @@ int main()
         check (finite (out), "sem NaN/Inf");
     }
 
+    std::printf ("Trim de entrada e medidor\n");
+    {
+        AuraBassAudioProcessor p;
+        setParam (p, ParamIDs::drive, -15.0f);
+        setParam (p, ParamIDs::cab, 0.0f);
+        setParam (p, ParamIDs::blend, 0.0f);     // só o caminho limpo, para medir ganho puro
+
+        setParam (p, ParamIDs::trim, 0.0f);
+        const auto semTrim = runBlocks (p, 110.0f, 0.1f, blockSize, { blockSize }, 24000);
+        const float picoSem = p.getInputPeak();
+
+        setParam (p, ParamIDs::trim, 12.0f);
+        const auto comTrim = runBlocks (p, 110.0f, 0.1f, blockSize, { blockSize }, 24000);
+        const float picoCom = p.getInputPeak();
+
+        auto pico = [] (const std::vector<float>& v)
+        {
+            float m = 0.0f;
+            for (size_t i = v.size() / 2; i < v.size(); ++i) m = juce::jmax (m, std::abs (v[i]));
+            return m;
+        };
+        const float razao = pico (comTrim) / juce::jmax (1.0e-9f, pico (semTrim));
+        const float emDb = juce::Decibels::gainToDecibels (razao);
+        std::printf ("  trim +12 dB -> saída %+0.2f dB; medidor %.3f -> %.3f\n", emDb, picoSem, picoCom);
+        check (std::abs (emDb - 12.0f) < 0.3f, "trim de +12 dB soma 12 dB antes de tudo");
+        check (picoCom > picoSem * 3.0f, "o medidor acompanha o trim");
+        check (std::abs (picoSem - 0.1f) < 0.02f, "o medidor mostra o pico real da entrada");
+
+        p.consumeInputClip();
+        setParam (p, ParamIDs::trim, 24.0f);
+        runBlocks (p, 110.0f, 0.3f, blockSize, { blockSize }, 12000);
+        check (p.consumeInputClip(), "o aviso de clip acende quando a entrada estoura");
+        check (! p.consumeInputClip(), "o aviso de clip apaga depois de lido");
+    }
+
     std::printf ("Blend 0%% = sinal limpo alinhado (sem phasing)\n");
     {
         AuraBassAudioProcessor p;

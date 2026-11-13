@@ -56,6 +56,7 @@ AuraBassAudioProcessor::AuraBassAudioProcessor()
     static const char* volatile auraSelo = AuraAutoria::marca;
     juce::ignoreUnused (auraSelo);
 
+    pTrim     = apvts.getRawParameterValue (ParamIDs::trim);
     pLevel    = apvts.getRawParameterValue (ParamIDs::level);
     pDrive    = apvts.getRawParameterValue (ParamIDs::drive);
     pLow      = apvts.getRawParameterValue (ParamIDs::low);
@@ -225,6 +226,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout AuraBassAudioProcessor::crea
                        .withValueFromStringFunction (parseNumber);
     auto eq = [] { return NormalisableRange<float> (-12.0f, 12.0f, 0.1f); };
 
+    // Trim: ajuste de entrada, antes de tudo. Serve para casar baixos passivos e
+    // ativos, e a saída de cada interface, sem mexer no Drive.
+    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::trim, 1 }, "Trim",
+                     NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::level, 1 }, "Level",
                      NormalisableRange<float> (-15.0f, 15.0f, 0.1f), 0.0f, dbAttr));
     p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::drive, 1 }, "Drive",
@@ -344,6 +349,8 @@ void AuraBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     blendMix.setCurrentAndTargetValue (effectiveBlend());
     cabMix.reset (currentSampleRate, 0.03);
     cabMix.setCurrentAndTargetValue (pCab->load() > 0.5f ? 1.0f : 0.0f);
+    trimGain.reset (currentSampleRate, 0.03);
+    trimGain.setCurrentAndTargetValue (dbToGain (pTrim != nullptr ? pTrim->load() : 0.0f));
     outputGain.reset (currentSampleRate, 0.05);
     outputGain.setCurrentAndTargetValue (dbToGain (pLevel->load()));
     autoGain.reset (currentSampleRate, 0.05);
@@ -387,7 +394,24 @@ void AuraBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         autoGain.setTargetValue (levelCompensation (d));
     }
 
-    // Afinador: o detector recebe a entrada crua (antes de qualquer processamento)
+    // Trim de entrada, antes de tudo: o afinador e o medidor já veem o sinal
+    // ajustado, e o Drive não precisa compensar a saída da interface.
+    trimGain.setTargetValue (dbToGain (pTrim->load()));
+    float peak = 0.0f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        const float g = trimGain.getNextValue();
+        for (int ch = 0; ch < procChannels; ++ch)
+        {
+            float* d = buffer.getWritePointer (ch);
+            d[i] *= g;
+            peak = juce::jmax (peak, std::abs (d[i]));
+        }
+    }
+    inputPeak.store (peak, std::memory_order_relaxed);
+    if (peak >= 0.99f) inputClip.store (true, std::memory_order_relaxed);
+
+    // Afinador: o detector recebe a entrada logo depois do trim
     const bool tunerOn = pTuner->load() > 0.5f;
     if (tunerOn)
         tuner.push (buffer.getArrayOfReadPointers(), procChannels, numSamples);

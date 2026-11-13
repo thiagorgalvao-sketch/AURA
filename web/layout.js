@@ -53,12 +53,19 @@
     cabToggleY: 175.0,
     cabHit: { x: 648.0, y: 108.0, w: 48.0, h: 94.0 },
 
+    meter: { x: 196.0, y: 288.0, w: 210.0, h: 15.0 },
+    meterHit: { x: 190.0, y: 276.0, w: 244.0, h: 40.0 },
+    meterMinDb: -42.0,
+    meterClipX: 420.0,
+    meterLabelY: 274.0,
+
     ledHalf: 16.0,
     toggleHalf: 25.0,
   };
 
   // Faixas dos parâmetros (iguais às de createParameterLayout no plugin)
   L.params = {
+    trim:     { min: -24, max: 24, step: 0.1, def: 0,   unit: 'dB', label: 'TRIM' },
     level:    { min: -15, max: 15, step: 0.1, def: 0,   unit: 'dB', label: 'LEVEL' },
     drive:    { min: -15, max: 15, step: 0.1, def: 0,   unit: 'dB', label: 'DRIVE' },
     low:      { min: -12, max: 12, step: 0.1, def: 0,   unit: 'dB', label: 'LOW' },

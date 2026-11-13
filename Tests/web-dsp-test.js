@@ -129,11 +129,12 @@ console.log('Layout da web igual ao do plugin (Source/Layout.h)');
   const scalars = ['knobHitRadius', 'knobMinAngleDeg', 'knobMaxAngleDeg', 'pointerHalf', 'valueY', 'valueFontSize',
                    'arcCentreDy', 'arcLitRadius', 'arcMaxDeg', 'driveSwitchX', 'driveSwitchY', 'driveSwitchDownHalf',
                    'driveLedX', 'driveLedY', 'driveLedHalf', 'tunerSwitchX', 'tunerSwitchY', 'tunerLedX', 'tunerLedY',
-                   'cabLedX', 'cabLedY', 'cabToggleX', 'cabToggleY', 'ledHalf', 'toggleHalf'];
+                   'cabLedX', 'cabLedY', 'cabToggleX', 'cabToggleY', 'ledHalf', 'toggleHalf',
+                   'meterMinDb', 'meterClipX', 'meterLabelY'];
   const bad = scalars.filter((k) => num(k) === null || Math.abs(num(k) - L[k]) > 1e-4);
   const size = h.match(/width\s*=\s*(\d+);[\s\S]*?height\s*=\s*(\d+);/);
   const sizeOk = size && +size[1] === L.width && +size[2] === L.height;
-  const rects = ['driveHit', 'tunerHit', 'tunerDisplay', 'menuButton', 'cabHit'].filter((k) => {
+  const rects = ['driveHit', 'tunerHit', 'tunerDisplay', 'menuButton', 'cabHit', 'meter', 'meterHit'].filter((k) => {
     const m = h.match(new RegExp('Rect ' + k + '\\s*\\{\\s*(-?[\\d.]+)f,\\s*(-?[\\d.]+)f,\\s*(-?[\\d.]+)f,\\s*(-?[\\d.]+)f'));
     if (!m) return true;
     const r = L[k];

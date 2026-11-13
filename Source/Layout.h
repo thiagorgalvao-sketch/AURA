@@ -54,6 +54,14 @@ namespace AuraLayout
     inline constexpr float cabToggleX = 671.5f, cabToggleY = 175.0f;
     inline constexpr Rect cabHit { 648.0f, 108.0f, 48.0f, 94.0f };
 
+    // Medidor de entrada, na faixa livre entre os dois footswitches. Arrastar
+    // nele ajusta o trim; o ponto à direita acende quando o sinal estoura.
+    inline constexpr Rect meter { 196.0f, 288.0f, 210.0f, 15.0f };
+    inline constexpr Rect meterHit { 190.0f, 276.0f, 244.0f, 40.0f };
+    inline constexpr float meterMinDb = -42.0f;     // começo da escala
+    inline constexpr float meterClipX = 420.0f;     // centro do ponto de clip
+    inline constexpr float meterLabelY = 274.0f;    // linha do rótulo (IN / trim)
+
     // Sobreposições (meio lado em unidades)
     inline constexpr float ledHalf = 16.0f;
     inline constexpr float toggleHalf = 25.0f;

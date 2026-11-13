@@ -197,6 +197,27 @@ def main():
         page.wait_for_timeout(300)
         page.screenshot(path=f"{OUT}/4-controles.png")
 
+        print("Medidor de entrada e trim")
+        nivel = page.evaluate("() => window.__aura.state.medidor.nivel")
+        print(f"   nível lido do medidor: {nivel:.1f} dBFS")
+        check(nivel > -60, "o medidor acompanha o sinal que está entrando")
+
+        page.evaluate("() => window.__aura.setParam('trim', 0)")
+        mx3, my3 = at(lay["meterHit"]["x"] + lay["meterHit"]["w"] / 2,
+                      lay["meterHit"]["y"] + lay["meterHit"]["h"] / 2)
+        page.mouse.move(mx3, my3)
+        page.mouse.down()
+        page.mouse.move(mx3, my3 - 40, steps=8)
+        page.mouse.up()
+        trim = page.evaluate("() => window.__aura.state.params.trim")
+        print(f"   TRIM após arrastar: {trim:+.1f} dB")
+        check(trim > 3, "arrastar no medidor ajusta o trim")
+        page.mouse.click(mx3, my3)
+        page.mouse.click(mx3, my3, delay=60)
+        page.wait_for_timeout(200)
+        check(abs(page.evaluate("() => window.__aura.state.params.trim")) < 0.01,
+              "toque duplo no medidor zera o trim")
+
         print("Menu")
         mx, my = at(lay["menuButton"]["x"] + 13, lay["menuButton"]["y"] + 11)
         page.mouse.click(mx, my)

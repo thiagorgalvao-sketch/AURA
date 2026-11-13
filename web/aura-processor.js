@@ -130,6 +130,7 @@ class AuraDsp {
     this.decimation = Math.max(1, Math.round(sr / 12000));
     this.decPhase = 0;
     this.tunerBuf = new Float32Array(256); this.tunerFill = 0;
+    this.trimGain = 1; this.inPeak = 0; this.inClip = false;
     this.onTunerData = null;
   }
 
@@ -162,6 +163,7 @@ class AuraDsp {
     if (p.drive !== this.lastDrive) { this.lastDrive = p.drive; this.autoTarget = levelCompensation(p.drive); }
     const driveTarget = dbToGain(p.drive + DRIVE_REF_DB);
     const blendTarget = p.driveOn ? p.blend / 100 : 0;
+    const trimTarget = dbToGain(p.trim || 0);
     const outTarget = dbToGain(p.level);
     const muteTarget = p.tuner ? 0 : 1;
     const k = this.kSmooth;
@@ -169,6 +171,13 @@ class AuraDsp {
     for (let i = 0; i < n; i++) {
       let x = 0;
       if (c0) x = p.channel === 1 ? c1[i] : p.channel === 2 ? 0.5 * (c0[i] + c1[i]) : c0[i];
+
+      // Trim de entrada, antes de tudo (igual ao plugin)
+      this.trimGain += (trimTarget - this.trimGain) * k;
+      x *= this.trimGain;
+      const mag = x < 0 ? -x : x;
+      if (mag > this.inPeak) this.inPeak = mag;
+      if (mag >= 0.99) this.inClip = true;
 
       if (p.tuner) {
         const t = this.tunerLp[1].process(this.tunerLp[0].process(x));
@@ -250,6 +259,7 @@ if (typeof registerProcessor !== 'undefined') {
       this.falhas = 0;
       this.avisadas = -1;
       this.proximoAviso = 0;
+      this.proximoPico = 0;
     }
     process(inputs, outputs) {
       const out = outputs[0];
@@ -268,6 +278,14 @@ if (typeof registerProcessor !== 'undefined') {
 
       this.dsp.process(inputs[0] || [], out[0]);
       for (let ch = 1; ch < out.length; ch++) out[ch].set(out[0]);
+
+      // Medidor de entrada: manda o pico do período para a interface
+      if (currentFrame >= this.proximoPico) {
+        this.proximoPico = currentFrame + Math.round(sampleRate / 30);
+        this.port.postMessage({ pico: this.dsp.inPeak, clip: this.dsp.inClip });
+        this.dsp.inPeak = 0;
+        this.dsp.inClip = false;
+      }
       return true;
     }
   }

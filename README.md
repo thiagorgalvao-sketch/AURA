@@ -86,6 +86,17 @@ entrada → HPF 18 Hz → pré-ênfase (+6 dB @ 800 Hz)
 
 Todos os parâmetros têm suavização (sem cliques), o Blend é alinhado com a latência do oversampling (sem phasing), e o plugin aceita mono e estéreo.
 
+## Medidor de entrada e trim
+
+Na faixa entre os dois footswitches há um medidor que mostra o que está
+chegando, com marca de pico e um ponto que acende quando o sinal estoura.
+Arrastar nele para cima ou para baixo ajusta o **trim** — um ganho de entrada
+de −24 a +24 dB, aplicado antes de tudo, para casar baixos passivos e ativos
+(e a saída de cada interface) sem mexer no Drive. Toque duplo zera.
+
+Ajuste de ouvido assim: toque forte e suba o trim até o medidor chegar perto
+do fim da faixa amarela, sem acender o ponto vermelho.
+
 ## No navegador (celular, tablet ou computador)
 
 O AURA Bass também roda direto no navegador, com o mesmo painel e o mesmo

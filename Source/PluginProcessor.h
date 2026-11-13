@@ -11,6 +11,7 @@
 
 namespace ParamIDs
 {
+    inline constexpr const char* trim     = "trim";
     inline constexpr const char* level    = "level";
     inline constexpr const char* drive    = "drive";
     inline constexpr const char* low      = "low";
@@ -101,6 +102,11 @@ public:
     // Afinador: com o parâmetro "tuner" ligado, a saída fica muda e a entrada alimenta o detector
     Tuner& getTuner() noexcept { return tuner; }
 
+    // Medidor de entrada: pico do bloco (linear, já com o trim aplicado) e um
+    // aviso de clip que fica grudado até a interface ler.
+    float getInputPeak() const noexcept { return inputPeak.load (std::memory_order_relaxed); }
+    bool consumeInputClip() noexcept { return inputClip.exchange (false, std::memory_order_relaxed); }
+
     // Escala da interface (100/125/150%), salva junto com a sessão
     float getUiScale() const noexcept { return uiScale.load(); }
     void setUiScale (float scale) noexcept { uiScale.store (juce::jlimit (1.0f, 1.5f, scale)); }
@@ -145,12 +151,16 @@ private:
     juce::AudioBuffer<float> dryBuffer, preCabBuffer;
 
     juce::SmoothedValue<float> driveGain, blendMix, cabMix, outputGain, autoGain, tunerMute;
+    juce::SmoothedValue<float> trimGain;
+    std::atomic<float> inputPeak { 0.0f };
+    std::atomic<bool>  inputClip { false };
     Tuner tuner;
 
     // Economia de CPU: a saturação (DRIVE desligado) e a convolução (CAB desligado) param de
     // ser processadas; ao voltar, os filtros são zerados e o crossfade evita qualquer clique.
     bool drivePathIdle = false, cabIdle = false;
 
+    std::atomic<float>* pTrim     = nullptr;
     std::atomic<float>* pLevel    = nullptr;
     std::atomic<float>* pDrive    = nullptr;
     std::atomic<float>* pLow      = nullptr;

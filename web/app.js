@@ -76,6 +76,7 @@ const state = {
   channel: 0,              // 0 = esquerda/mono, 1 = direita, 2 = soma
   inputDeviceId: '',
   outputDeviceId: '',
+  medidor: { nivel: -120, retencao: -120, retFrames: 0, clip: false, clipFrames: 0, mostraTrim: 0 },
   latencia: 'minima',   // minima | equilibrada | estavel
 
   inputLabel: '',       // só para mostrar qual entrada está em uso
@@ -230,6 +231,69 @@ async function setIr(index, custom) {
   } catch (err) {
     toast('Não consegui carregar essa resposta de impulso.');
   }
+}
+
+// ---------------------------------------------------------------------------
+// Medidor de entrada (mesma balística do plugin)
+// ---------------------------------------------------------------------------
+
+function atualizaMedidor(pico, clip) {
+  const m = state.medidor;
+  const db = pico > 1e-6 ? 20 * Math.log10(pico) : -120;
+  m.nivel = db > m.nivel ? db : m.nivel - 1.6;
+  m.nivel = Math.max(-120, Math.min(12, m.nivel));
+  if (db >= m.retencao) { m.retencao = db; m.retFrames = 30; }
+  else if (--m.retFrames <= 0) m.retencao = Math.max(-120, m.retencao - 1);
+  if (clip) { m.clip = true; m.clipFrames = 45; }
+  else if (m.clip && --m.clipFrames <= 0) m.clip = false;
+  if (m.mostraTrim > 0) m.mostraTrim--;
+  paint();
+}
+
+function desenhaMedidor() {
+  const m = state.medidor, b = L.meter;
+  const paraX = (db) => b.x + Math.max(0, Math.min(1, (db - L.meterMinDb) / (0 - L.meterMinDb))) * b.w;
+
+  ctx.fillStyle = 'rgba(11,12,14,.88)';
+  roundRect(b.x, b.y, b.w, b.h, 3, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.25)';
+  ctx.lineWidth = 1;
+  roundRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1, 3, false);
+
+  const ix = b.x + 1.5, iy = b.y + 1.5, iw = b.w - 3, ih = b.h - 3;
+  if (m.nivel > L.meterMinDb) {
+    const grad = ctx.createLinearGradient(ix, 0, ix + iw, 0);
+    grad.addColorStop(0, '#2f9e5a');
+    grad.addColorStop(0.72, '#d8c23a');
+    grad.addColorStop(1, '#d8503a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(ix, iy, Math.max(0, Math.min(ix + iw, paraX(m.nivel)) - ix), ih);
+  }
+  if (m.retencao > L.meterMinDb) {
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.fillRect(Math.min(ix + iw - 1.5, paraX(m.retencao)), iy, 1.5, ih);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.22)';
+  for (const db of [-30, -18, -12, -6]) ctx.fillRect(paraX(db), b.y + b.h + 1, 1, 3);
+
+  ctx.beginPath();
+  ctx.arc(L.meterClipX, b.y + b.h / 2, 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = m.clip ? '#e8503a' : '#2a2c30';
+  ctx.fill();
+  if (m.clip) {
+    ctx.beginPath();
+    ctx.arc(L.meterClipX, b.y + b.h / 2, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(232,80,58,.4)';
+    ctx.fill();
+  }
+
+  const mostra = m.mostraTrim > 0 || (drag && drag.id === 'trim');
+  ctx.font = '9px Roboto, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = mostra ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.45)';
+  ctx.fillText(mostra ? `TRIM ${state.params.trim >= 0 ? '+' : ''}${state.params.trim.toFixed(1)} dB` : 'IN',
+               b.x, L.meterLabelY + 5);
 }
 
 // ---------------------------------------------------------------------------
@@ -448,6 +512,7 @@ async function iniciaAudio(deviceId) {
     master.connect(ctxAudio.destination);
 
     worklet.port.onmessage = (e) => {
+      if (e.data.pico !== undefined) { atualizaMedidor(e.data.pico, e.data.clip); return; }
       if (e.data.falhas !== undefined) { avisaFalhas(e.data.falhas); return; }
       if (e.data.tuner && tuner.detector) {
         tuner.detector.push(e.data.tuner, e.data.rate);
@@ -683,6 +748,8 @@ function drawPanel() {
   const m = L.menuButton;
   ctx.fillStyle = COLORS.small;
   for (let i = 0; i < 3; i++) roundRect(m.x + (m.w - 15) / 2, m.y + (m.h - 11) / 2 + i * 4.6, 15, 1.8, 0.9, true);
+
+  desenhaMedidor();
 
   if (state.tuner) { drawTuner(); return; }
 
@@ -930,6 +997,22 @@ canvas.addEventListener('pointerdown', (ev) => {
   const value = valueAt(p);
   if (value) { showValueInput(value); return; }
   if (cabNameAt(p)) { openMenu(ev, 'cab'); return; }
+
+  if (inRect(p, L.meterHit)) {
+    const agora = performance.now();
+    if (lastTap.id === 'trim' && agora - lastTap.time < 400) {
+      setParam('trim', 0);
+      state.medidor.mostraTrim = 45;
+      lastTap = { time: 0, id: null };
+      return;
+    }
+    lastTap = { time: agora, id: 'trim' };
+    canvas.setPointerCapture(ev.pointerId);
+    drag = { id: 'trim', startX: ev.clientX, startY: ev.clientY, startValue: state.params.trim, fine: ev.shiftKey };
+    state.medidor.mostraTrim = 45;
+    ev.preventDefault();
+    return;
+  }
 
   if (inRect(p, L.driveHit)) { state.pressed = 'drive'; paint(); return; }
   if (inRect(p, L.tunerHit)) { state.pressed = 'tuner'; paint(); return; }

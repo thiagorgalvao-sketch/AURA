@@ -371,6 +371,12 @@ AuraPanel::AuraPanel (AuraBassAudioProcessor& p) : processor (p)
         spot->onContextMenu = [this, param] { if (onParameterContextMenu) onParameterContextMenu (*param); };
     }
 
+    // Antes do setSize: é ele que dispara o resized que posiciona os filhos.
+    meter = std::make_unique<InputMeter> (processor,
+               dynamic_cast<RangedAudioParameter*> (processor.apvts.getParameter (ParamIDs::trim)));
+    meter->setTitle ("Entrada");
+    addAndMakeVisible (*meter);
+
     setSize (L::width, L::height);
     timerCallback();
     startTimerHz (30);
@@ -430,6 +436,8 @@ void AuraPanel::repaintKnobArea (size_t index)
 
 void AuraPanel::timerCallback()
 {
+    if (meter != nullptr) meter->tick();
+
     const bool d = processor.apvts.getRawParameterValue (ParamIDs::driveOn)->load() > 0.5f;
     const bool c = processor.apvts.getRawParameterValue (ParamIDs::cab)->load() > 0.5f;
     const int irVersion = processor.getCabIRVersion();
@@ -577,6 +585,145 @@ void AuraPanel::showCabMenu()
     });
 }
 
+//==============================================================================
+InputMeter::InputMeter (AuraBassAudioProcessor& p, juce::RangedAudioParameter* trimParam)
+    : processor (p), trim (trimParam)
+{
+    setMouseCursor (juce::MouseCursor::UpDownResizeCursor);
+}
+
+float InputMeter::trimDb() const
+{
+    return trim != nullptr ? trim->convertFrom0to1 (trim->getValue()) : 0.0f;
+}
+
+void InputMeter::setTrim (float db)
+{
+    if (trim == nullptr) return;
+    const auto v = trim->convertTo0to1 (juce::jlimit (-24.0f, 24.0f, db));
+    trim->setValueNotifyingHost (v);
+    mostrarTrimFrames = 45;          // ~1,5 s mostrando o número
+    repaint();
+}
+
+void InputMeter::tick()
+{
+    const float pico = processor.getInputPeak();
+    const float db = pico > 1.0e-6f ? juce::Decibels::gainToDecibels (pico) : -120.0f;
+
+    // Sobe na hora, desce devagar: é o que deixa o medidor legível.
+    nivel = db > nivel ? db : nivel - 1.6f;
+    nivel = juce::jlimit (-120.0f, 12.0f, nivel);
+
+    if (db >= retencao) { retencao = db; retencaoFrames = 30; }
+    else if (--retencaoFrames <= 0) retencao = juce::jmax (-120.0f, retencao - 1.0f);
+
+    if (processor.consumeInputClip()) { clip = true; clipFrames = 45; }
+    else if (clip && --clipFrames <= 0) clip = false;
+
+    if (mostrarTrimFrames > 0) --mostrarTrimFrames;
+    repaint();
+}
+
+void InputMeter::paint (juce::Graphics& g)
+{
+        namespace L = AuraLayout;
+    const float esc = (float) getWidth() / L::meterHit.w;
+    const auto barra = juce::Rectangle<float> (L::meter.x - L::meterHit.x, L::meter.y - L::meterHit.y,
+                                               L::meter.w, L::meter.h) * esc;
+
+    // Encaixe do medidor: um rebaixo escuro no metal
+    g.setColour (juce::Colour (0xff0b0c0e).withAlpha (0.88f));
+    g.fillRoundedRectangle (barra, 3.0f * esc);
+    g.setColour (juce::Colour (0x40ffffff));
+    g.drawRoundedRectangle (barra.reduced (0.5f), 3.0f * esc, 1.0f);
+
+    auto paraX = [&] (float db)
+    {
+        const float t = juce::jlimit (0.0f, 1.0f, (db - L::meterMinDb) / (0.0f - L::meterMinDb));
+        return barra.getX() + t * barra.getWidth();
+    };
+
+    // Preenchimento: verde até -12 dB, âmbar até -3, vermelho no topo
+    const auto interno = barra.reduced (1.5f * esc);
+    if (nivel > L::meterMinDb)
+    {
+        const float x = juce::jlimit (interno.getX(), interno.getRight(), paraX (nivel));
+        juce::ColourGradient grad (juce::Colour (0xff2f9e5a), interno.getX(), 0.0f,
+                                   juce::Colour (0xffd8503a), interno.getRight(), 0.0f, false);
+        grad.addColour (0.72, juce::Colour (0xffd8c23a));
+        g.setGradientFill (grad);
+        g.fillRect (interno.withRight (x));
+    }
+
+    // Marca do pico recente
+    if (retencao > L::meterMinDb)
+    {
+        g.setColour (juce::Colours::white.withAlpha (0.75f));
+        g.fillRect (juce::Rectangle<float> (juce::jlimit (interno.getX(), interno.getRight() - 1.0f, paraX (retencao)),
+                                            interno.getY(), 1.5f * esc, interno.getHeight()));
+    }
+
+    // Riscos de referência
+    g.setColour (juce::Colours::white.withAlpha (0.22f));
+    for (float db : { -30.0f, -18.0f, -12.0f, -6.0f })
+        g.fillRect (juce::Rectangle<float> (paraX (db), barra.getBottom() + 1.0f * esc, 1.0f * esc, 3.0f * esc));
+
+    // Ponto de clip
+    const auto ponto = juce::Rectangle<float> (0.0f, 0.0f, 7.0f * esc, 7.0f * esc)
+                           .withCentre ({ (L::meterClipX - L::meterHit.x) * esc, barra.getCentreY() });
+    g.setColour (clip ? juce::Colour (0xffe8503a) : juce::Colour (0xff2a2c30));
+    g.fillEllipse (ponto);
+    if (clip)
+    {
+        g.setColour (juce::Colour (0x66e8503a));
+        g.fillEllipse (ponto.expanded (3.0f * esc));
+    }
+
+    // Rótulo: "IN" normalmente, o valor do trim enquanto se ajusta
+    g.setFont (juce::Font (juce::FontOptions (9.0f * esc)));
+    g.setColour (juce::Colours::white.withAlpha (mostrarTrimFrames > 0 ? 0.85f : 0.45f));
+    const auto rotulo = juce::Rectangle<float> (barra.getX(), (L::meterLabelY - L::meterHit.y) * esc,
+                                                barra.getWidth(), 11.0f * esc);
+    g.drawText (mostrarTrimFrames > 0 || arrastando
+                    ? ("TRIM " + juce::String (trimDb() >= 0.0f ? "+" : "") + juce::String (trimDb(), 1) + " dB")
+                    : juce::String ("IN"),
+                rotulo, juce::Justification::centredLeft, false);
+}
+
+void InputMeter::mouseDown (const juce::MouseEvent& e)
+{
+    arrastando = true;
+    trimInicial = trimDb();
+    yInicial = e.getPosition().y;
+    if (trim != nullptr) trim->beginChangeGesture();
+    repaint();
+}
+
+void InputMeter::mouseDrag (const juce::MouseEvent& e)
+{
+    if (! arrastando) return;
+    const float sens = e.mods.isShiftDown() ? 600.0f : 150.0f;
+    setTrim (trimInicial + (float) (yInicial - e.getPosition().y) / sens * 48.0f);
+}
+
+void InputMeter::mouseUp (const juce::MouseEvent&)
+{
+    if (arrastando && trim != nullptr) trim->endChangeGesture();
+    arrastando = false;
+    mostrarTrimFrames = 30;
+    repaint();
+}
+
+void InputMeter::mouseDoubleClick (const juce::MouseEvent&)
+{
+    if (trim == nullptr) return;
+    trim->beginChangeGesture();
+    setTrim (0.0f);
+    trim->endChangeGesture();
+}
+
+//==============================================================================
 void AuraPanel::chooseIrFile()
 {
     // Começa na pasta da última IR escolhida (ou em Documentos)
@@ -622,7 +769,8 @@ void AuraPanel::showMainMenu (bool fromButton)
                       "Duplo clique no knob: valor padrão",
                       "Clique no valor: digitar",
                       "Clique no nome da caixa (4x10): trocar a IR",
-                      "TUNER: afinador (saída muda)" })
+                      "TUNER: afinador (saída muda)",
+                      "Arrastar no medidor IN: trim de entrada" })
         m.addItem (-1, String::fromUTF8 (tip), false);
 
 #if JucePlugin_Build_Standalone
@@ -681,6 +829,7 @@ void AuraPanel::resized()
         knobs[i]->setBounds (b);
         knobs[i]->centre = { k.cx - (float) b.getX(), k.cy - (float) b.getY() };
     }
+    if (meter != nullptr) meter->setBounds (toInt (L::meterHit));
     driveSpot.setBounds (toInt (L::driveHit));
     tunerSpot.setBounds (toInt (L::tunerHit));
     cabSpot.setBounds (toInt (L::cabHit));
@@ -718,6 +867,52 @@ AuraBassAudioProcessorEditor::AuraBassAudioProcessorEditor (AuraBassAudioProcess
     panel.onScaleChosen = [this] (float s) { setScale (s); };
     panel.onParameterContextMenu = [this] (RangedAudioParameter& param) { showHostMenu (param); };
     setScale (processor.getUiScale());
+}
+
+AuraBassAudioProcessorEditor::~AuraBassAudioProcessorEditor()
+{
+    if (janela != nullptr)
+    {
+        guardaJanela();
+        janela->removeComponentListener (this);
+        janela = nullptr;
+    }
+}
+
+void AuraBassAudioProcessorEditor::parentHierarchyChanged()
+{
+#if JucePlugin_Build_Standalone
+    auto* topo = getTopLevelComponent();
+    if (topo == janela || topo == this) return;
+
+    if (janela != nullptr) janela->removeComponentListener (this);
+    janela = topo;
+    if (janela == nullptr) return;
+    janela->addComponentListener (this);
+
+    if (auto* w = dynamic_cast<ResizableWindow*> (janela))
+        if (auto* h = juce::StandalonePluginHolder::getInstance())
+            if (h->settings != nullptr)
+            {
+                const auto estado = h->settings->getValue ("auraJanela");
+                if (estado.isNotEmpty()) w->restoreWindowStateFromString (estado);
+            }
+#endif
+}
+
+void AuraBassAudioProcessorEditor::componentMovedOrResized (Component&, bool, bool)
+{
+    guardaJanela();
+}
+
+void AuraBassAudioProcessorEditor::guardaJanela()
+{
+#if JucePlugin_Build_Standalone
+    if (auto* w = dynamic_cast<ResizableWindow*> (janela))
+        if (auto* h = juce::StandalonePluginHolder::getInstance())
+            if (h->settings != nullptr)
+                h->settings->setValue ("auraJanela", w->getWindowStateAsString());
+#endif
 }
 
 void AuraBassAudioProcessorEditor::showHostMenu (RangedAudioParameter& param)

@@ -60,6 +60,42 @@ private:
 };
 
 //==============================================================================
+// Medidor de entrada com ajuste de trim: mostra o pico que está chegando e
+// acende o ponto de clip. Arrastar na vertical muda o trim; duplo clique zera.
+class InputMeter : public juce::Component
+{
+public:
+    InputMeter (AuraBassAudioProcessor&, juce::RangedAudioParameter* trimParam);
+
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override;
+    void mouseDoubleClick (const juce::MouseEvent&) override;
+
+    /** Chamado pelo timer do painel: atualiza a balística e repinta se mudou. */
+    void tick();
+
+private:
+    float trimDb() const;
+    void setTrim (float db);
+
+    AuraBassAudioProcessor& processor;
+    juce::RangedAudioParameter* trim = nullptr;
+
+    float nivel = -120.0f;     // pico suavizado, em dB
+    float retencao = -120.0f;  // marca do pico recente
+    int retencaoFrames = 0;
+    bool clip = false;
+    int clipFrames = 0;
+
+    bool arrastando = false;
+    float trimInicial = 0.0f;
+    int yInicial = 0;
+    int mostrarTrimFrames = 0;
+};
+
+//==============================================================================
 // Botão de menu: três traços discretos, no tom dos textos do painel
 class MenuButton : public juce::Button
 {
@@ -128,6 +164,7 @@ private:
     std::vector<std::unique_ptr<juce::Label>> valueLabels;   // valores editáveis (clique para digitar)
     MenuButton menuButton;
 
+    std::unique_ptr<InputMeter> meter;
     HotSpot driveSpot, cabSpot, tunerSpot;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> driveAttachment, cabAttachment, tunerAttachment;
     TunerDisplay tunerDisplay { *assets };
@@ -141,16 +178,24 @@ private:
 };
 
 //==============================================================================
-class AuraBassAudioProcessorEditor : public juce::AudioProcessorEditor
+class AuraBassAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                     private juce::ComponentListener
 {
 public:
     explicit AuraBassAudioProcessorEditor (AuraBassAudioProcessor&);
+    ~AuraBassAudioProcessorEditor() override;
 
     void resized() override;
     void setScale (float scale);
+    void parentHierarchyChanged() override;
 
 private:
     void showHostMenu (juce::RangedAudioParameter&);
+
+    // No app autônomo, guarda e devolve a posição da janela entre aberturas.
+    void componentMovedOrResized (juce::Component&, bool, bool) override;
+    void guardaJanela();
+    juce::Component* janela = nullptr;
 
     AuraBassAudioProcessor& processor;
     AuraPanel panel;
