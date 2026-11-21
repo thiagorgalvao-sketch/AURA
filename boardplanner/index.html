@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planejador de Pedalboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1114;--bg2:#161a1f;--bg3:#1d2228;--line:#2a3038;--tx:#e8eaed;--mut:#8b939e;
+  --acc:#f5a623;--acc2:#ffcf70;--ok:#4cd28a;--bad:#ff5d5d;--warn:#ffb347;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,system-ui,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#14171b,#0f1114)}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--acc);display:grid;place-items:center;color:#1a1200;font-weight:800}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+header p{margin:0;color:var(--mut);font-size:12.5px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:0;min-height:calc(100vh - 63px)}
+.stage{padding:14px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar .grp{display:flex;gap:6px;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:5px 8px}
+.toolbar label{color:var(--mut);font-size:12px}
+input[type=number]{width:62px}
+input,select,textarea{background:var(--bg3);border:1px solid var(--line);border-radius:7px;padding:6px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+button{background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:#3d4550;background:#232931}
+button.pri{background:var(--acc);color:#1a1200;border-color:var(--acc);font-weight:600}
+button.pri:hover{background:var(--acc2)}
+button.danger{color:#ffb0b0}
+button:disabled{opacity:.4;cursor:default}
+.canvas{background:radial-gradient(circle at 50% 40%,#1a1f25,#111418);border:1px solid var(--line);border-radius:14px;padding:6px;position:relative}
+svg#svg{width:100%;height:auto;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.status{display:flex;flex-wrap:wrap;gap:8px;font-size:12.5px}
+.chip{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut)}
+.chip b{color:var(--tx);font-weight:600}
+.warns{display:flex;flex-direction:column;gap:4px}
+.warn{font-size:12.5px;color:var(--warn);background:rgba(255,179,71,.07);border:1px solid rgba(255,179,71,.25);border-radius:8px;padding:5px 10px}
+.warn.bad{color:#ff9a9a;background:rgba(255,93,93,.07);border-color:rgba(255,93,93,.3)}
+.hint{color:var(--mut);font-size:12px;margin:0}
+aside{border-left:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-width:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;border-radius:0;background:none;padding:12px 6px;color:var(--mut);font-weight:600;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--tx);border-bottom-color:var(--acc)}
+.pane{padding:14px 16px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+.sec h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 8px;font-weight:600}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>select{flex:1;min-width:0}
+.field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.field span{font-size:11.5px;color:var(--mut)}
+.field input,.field select{width:100%}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.list li{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg3);border:1px solid transparent;border-radius:8px;cursor:pointer}
+.list li.sel{border-color:var(--acc)}
+.list .num{font:600 11px 'JetBrains Mono',monospace;width:20px;height:20px;border-radius:50%;background:var(--acc);color:#1a1200;display:grid;place-items:center;flex:none}
+.list .num.off{background:#3a4049;color:var(--mut)}
+.list .sw{width:12px;height:12px;border-radius:3px;flex:none;border:1px solid #0006}
+.list .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list button{padding:2px 7px;font-size:11px}
+.io{font-size:12px;color:var(--mut);padding:2px 8px}
+details summary{cursor:pointer;color:var(--mut);font-size:12.5px;margin-top:8px}
+details[open] summary{margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--mut);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:4px 4px;border-bottom:1px solid var(--line)}
+td{padding:6px 4px;border-bottom:1px solid #222830;vertical-align:top}
+td.mono,.mono{font-family:'JetBrains Mono',monospace}
+td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.big{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--acc)}
+.sum{display:flex;flex-wrap:wrap;gap:6px}
+.sum .chip{color:var(--tx)}
+.seg{display:flex;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:none;padding:5px 9px;font-size:12.5px;color:var(--mut);border-radius:6px;flex:1}
+.seg button.on{background:#2e353f;color:var(--tx)}
+textarea{width:100%;min-height:110px;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2e353f;border:1px solid var(--line);padding:8px 14px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+/* svg */
+.board-base{fill:#0b0d10;stroke:#3a414b;stroke-width:.25}
+.slat{fill:#262c34}
+.gridl{stroke:#ffffff0d;stroke-width:.06}
+.ruler{fill:#6c7480;font:600 1px 'JetBrains Mono',monospace}
+.pedal{cursor:grab}
+.pedal rect.body{stroke:#000a;stroke-width:.15}
+.pedal.sel rect.body{stroke:var(--acc);stroke-width:.35}
+.pedal.bad rect.body{stroke:var(--bad);stroke-width:.35;stroke-dasharray:.6 .3}
+.pedal text{pointer-events:none;font-family:Inter,sans-serif;font-weight:600}
+.jin{fill:#4cd28a;stroke:#000;stroke-width:.1}
+.jout{fill:#f5a623;stroke:#000;stroke-width:.1}
+.term{cursor:grab}
+.clabel{font:600 .95px 'JetBrains Mono',monospace;pointer-events:none}
+.cat{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin-top:8px;background:var(--bg)}
+.cg{position:sticky;top:0;background:#1a1f25;color:var(--mut);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:5px 10px;border-bottom:1px solid var(--line)}
+.ci{display:flex;align-items:center;gap:8px;width:100%;border:0;border-radius:0;background:none;padding:7px 10px;text-align:left;border-bottom:1px solid #1d2228}
+.ci:hover{background:#1d2228}
+.ci .sw{width:11px;height:11px;border-radius:3px;flex:none;border:1px solid #0006}
+.ci .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci .dim{color:var(--mut);font-size:11.5px}
+@media (max-width:980px){
+  .layout{grid-template-columns:1fr}
+  aside{border-left:0;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">PB</div>
+  <div>
+    <h1>Planejador de Pedalboard</h1>
+    <p>Monte o layout, defina a ordem do sinal e calcule os cabos de patch.</p>
+  </div>
+</header>
+
+<div class="layout">
+  <section class="stage">
+    <div class="toolbar">
+      <div class="grp">
+        <label>Base</label>
+        <select id="boardPreset"></select>
+        <input type="number" id="bw" step="0.5" min="10" title="Largura (cm)"><label>×</label>
+        <input type="number" id="bh" step="0.5" min="5" title="Profundidade (cm)"><label>cm</label>
+      </div>
+      <div class="grp">
+        <button data-act="rot" title="Girar 90° (R)">⟳ Girar</button>
+        <button data-act="dup">Duplicar</button>
+        <button data-act="del" class="danger" title="Remover (Delete)">Remover</button>
+      </div>
+      <div class="grp">
+        <label><input type="checkbox" id="showCables" checked> Cabos</label>
+        <label><input type="checkbox" id="showLabels" checked> Medidas</label>
+      </div>
+    </div>
+    <div class="canvas"><svg id="svg" xmlns="http://www.w3.org/2000/svg"><g id="root"></g></svg></div>
+    <div class="status" id="status"></div>
+    <div class="warns" id="warns"></div>
+    <p class="hint">Arraste os pedais para posicionar · toque duplo ou tecla <b>R</b> gira · setas movem 0,5 cm · <b>Delete</b> remove. Jacks: <span style="color:var(--ok)">●</span> entrada, <span style="color:var(--acc)">●</span> saída. O sinal entra pela direita e sai pela esquerda, como na maioria dos pedais.</p>
+  </section>
+
+  <aside>
+    <div class="tabs">
+      <button data-tab="pedais">Pedais</button>
+      <button data-tab="cabos">Cabos</button>
+      <button data-tab="projeto">Projeto</button>
+    </div>
+    <div class="pane" id="pane"></div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const fmt=(n,d=1)=>(+n).toFixed(d).replace('.',',');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const KEY='pedalboard-planner-v2';
+const M=7; // margem ao redor da base (cm)
+
+const BOARDS=[
+  ['custom','Personalizada',null,null],
+  ['pt-nano','Pedaltrain Nano',45.7,12.7],
+  ['pt-m16','Pedaltrain Metro 16',40.6,20.3],
+  ['pt-m20','Pedaltrain Metro 20',50.8,20.3],
+  ['pt-m24','Pedaltrain Metro 24',61,20.3],
+  ['pt-cjr','Pedaltrain Classic Jr',45.7,31.8],
+  ['pt-c1','Pedaltrain Classic 1',55.9,31.8],
+  ['pt-c2','Pedaltrain Classic 2',61,31.8],
+  ['pt-n24','Pedaltrain Novo 24',61,36.8],
+  ['pt-n32','Pedaltrain Novo 32',81.3,36.8],
+];
+// Catálogo: medidas aproximadas (largura × profundidade, cm), conforme dados publicados pelos fabricantes.
+// [marca, modelo, largura, profundidade, cor, entra na cadeia]
+let CATALOG=[["Seu setup", "TC Polytune 3", 7.3, 12.2, "#22262c", true], ["Seu setup", "TC Forcefield", 7.4, 13.1, "#b03a2e", true], ["Seu setup", "Boss OC-3", 7.3, 13.0, "#4a3b8f", true], ["Seu setup", "EHX Bass Microsynth", 15.4, 12.1, "#cfd4da", true], ["Seu setup", "JHS Kilt V2", 7.4, 12.6, "#1e6b4f", true], ["Seu setup", "Aguilar Tone Hammer", 11.2, 13.5, "#141a22", true], ["Formatos genéricos", "Mini pedal (1590A)", 4.2, 9.4, "#2e86c1", true], ["Formatos genéricos", "Gabinete 1590B", 6.0, 11.2, "#c0392b", true], ["Formatos genéricos", "Gabinete 125B", 6.6, 12.1, "#16a085", true], ["Formatos genéricos", "Gabinete 1590BB", 9.4, 11.9, "#7d3c98", true], ["Formatos genéricos", "Gabinete 1590DD", 18.8, 12.0, "#2c3e50", true], ["Formatos genéricos", "Pedal de expressão/volume", 10.0, 25.0, "#2b2f36", true]];
+const BASE_N=CATALOG.length;let catLoaded=false;
+const OFFCHAIN=/power|supply|fonte|\biso[- ]?\d|zuma|ojai|junction|patch ?bay|riser|cable|cabo|bracket|mount|light/i;
+fetch('pedais-rivus.json').then(r=>r.ok?r.json():Promise.reject()).then(rows=>{CATALOG=CATALOG.concat(rows.map(r=>[r[0],r[1],r[2],r[3],null,!OFFCHAIN.test(r[0]+' '+r[1])]));catLoaded=true;if(S.tab==='pedais')renderCat()}).catch(()=>{});
+const PLUGS={L:{n:'L (angular)',off:1.8},panq:{n:'Panqueca',off:1.2},reto:{n:'Reto',off:4.5}};
+const CC=['#f5b041','#5dade2','#58d68d','#ec7063','#af7ac5','#48c9b0','#f4d03f','#eb984e','#85c1e9','#f1948a'];
+
+function defaults(){
+  const P=(name,w,h,x,y,color,jacks='lados',chain=true)=>({id:uid(),name,w,h,x,y,rot:0,color,jacks,_c:chain});
+  const ps=[
+    P('TC Polytune 3',7.3,12.2,69.2,17.8,'#22262c'),
+    P('TC Forcefield',7.4,13.1,57.8,16.9,'#b03a2e'),
+    P('Boss OC-3',7.3,13,46.5,17,'#4a3b8f'),
+    P('EHX Bass Microsynth',15.4,12.1,27.1,17.9,'#cfd4da'),
+    P('JHS Kilt V2',7.4,12.6,15.7,17.4,'#1e6b4f'),
+    P('Aguilar Tone Hammer',11.2,13.5,0.5,16.5,'#141a22'),
+    P('Fonte de alimentação',15,8,31.5,3,'#3a3f47','lados',false),
+  ];
+  const chain=ps.filter(p=>p._c).map(p=>p.id); ps.forEach(p=>delete p._c);
+  return {board:{w:78,h:32,preset:'custom'},pedals:ps,chain,sel:null,tab:'pedais',
+    plug:'L',route:'orto',slack:2,round:'comercial',sizes:'10, 15, 20, 25, 30, 40, 50, 60, 80, 100',
+    panel:false,term:{in:{x:78,y:8},out:{x:0,y:8}},snap:0.5,showCables:true,showLabels:true};
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!Array.isArray(S.pedals)) S=defaults();
+S=Object.assign(defaults(),S,{pedals:S.pedals,chain:S.chain||[]});
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+const byId=id=>S.pedals.find(p=>p.id===id);
+const inChain=p=>S.chain.includes(p.id);
+const fp=p=>{const r=p.rot%180!==0;return{W:r?p.h:p.w,H:r?p.w:p.h}};
+function rotPt(p,lx,ly){const w=p.w,h=p.h;switch(p.rot){case 90:return[h-ly,lx];case 180:return[w-lx,h-ly];case 270:return[ly,w-lx];default:return[lx,ly]}}
+function rotV(p,vx,vy){for(let k=0;k<p.rot/90;k++)[vx,vy]=[-vy,vx];return[vx,vy]}
+function jacks(p){
+  let li,lo,di,dout;
+  if(p.jacks==='topo'){li=[p.w*.75,0];lo=[p.w*.25,0];di=dout=[0,-1]}
+  else if(p.jacks==='inv'){li=[0,p.h*.3];lo=[p.w,p.h*.3];di=[-1,0];dout=[1,0]}
+  else {li=[p.w,p.h*.3];lo=[0,p.h*.3];di=[1,0];dout=[-1,0]}
+  const a=rotPt(p,...li),b=rotPt(p,...lo);
+  return{in:{x:p.x+a[0],y:p.y+a[1],d:rotV(p,...di)},out:{x:p.x+b[0],y:p.y+b[1],d:rotV(p,...dout)}};
+}
+function termJack(k){
+  const t=S.term[k],B=S.board;
+  const ds=[[t.x,[1,0]],[B.w-t.x,[-1,0]],[t.y,[0,1]],[B.h-t.y,[0,-1]]].sort((a,b)=>a[0]-b[0]);
+  return{x:t.x,y:t.y,d:ds[0][1]};
+}
+const rectOf=p=>{const f=fp(p);return{x:p.x,y:p.y,W:f.W,H:f.H}};
+const inter=(a,b)=>a.x<b.x+b.W-.05&&b.x<a.x+a.W-.05&&a.y<b.y+b.H-.05&&b.y<a.y+a.H-.05;
+const inside=(pt,r)=>pt.x>r.x+.05&&pt.x<r.x+r.W-.05&&pt.y>r.y+.05&&pt.y<r.y+r.H-.05;
+function sizes(){return S.sizes.split(/[,;\s]+/).map(Number).filter(v=>v>0).sort((a,b)=>a-b)}
+function pick(need){
+  if(S.round==='comercial'){const s=sizes().find(v=>v>=need-.001);
+    if(s!=null)return{v:s,custom:false};return{v:Math.ceil(need/5)*5,custom:true}}
+  const st=+S.round||1;return{v:Math.max(st,Math.ceil((need-.001)/st)*st),custom:true};
+}
+
+function links(){
+  const nodes=[];
+  if(S.panel)nodes.push({name:'Painel IN',out:termJack('in')});
+  S.chain.map(byId).filter(Boolean).forEach(p=>{const j=jacks(p);nodes.push({name:p.name,p,in:j.in,out:j.out})});
+  if(S.panel)nodes.push({name:'Painel OUT',in:termJack('out')});
+  const off=PLUGS[S.plug].off,L=[];
+  for(let i=0;i<nodes.length-1;i++){
+    const A=nodes[i],Bn=nodes[i+1],a=A.out,b=Bn.in;
+    const ea={x:a.x+a.d[0]*off,y:a.y+a.d[1]*off},eb={x:b.x+b.d[0]*off,y:b.y+b.d[1]*off};
+    const dx=eb.x-ea.x,dy=eb.y-ea.y;
+    const d=S.route==='orto'?Math.abs(dx)+Math.abs(dy):Math.hypot(dx,dy);
+    const facing=a.d[0]*b.d[0]+a.d[1]*b.d[1]<-.9;
+    const along=dx*a.d[0]+dy*a.d[1],perp=Math.abs(-dx*a.d[1]+dy*a.d[0]);const crossed=facing&&along<0&&along>-12&&perp<3;
+    const need=d+(+S.slack||0);
+    const hits=S.pedals.filter(p=>p!==A.p&&p!==Bn.p&&(inside(ea,rectOf(p))||inside(eb,rectOf(p)))).map(p=>p.name);
+    L.push({i,from:A.name,to:Bn.name,a,b,ea,eb,d,need,size:pick(need),crossed,hits,color:CC[i%CC.length]});
+  }
+  return L;
+}
+
+/* ---------- render SVG ---------- */
+const svg=$('#svg'),root=$('#root');
+function render(){
+  const B=S.board;
+  svg.setAttribute('viewBox',`${-M} ${-M} ${B.w+2*M} ${B.h+2*M}`);
+  let h='';
+  h+=`<rect class="board-base" x="0" y="0" width="${B.w}" height="${B.h}" rx="1"/>`;
+  const n=Math.max(2,Math.round(B.h/8)),gap=1.6,sh=(B.h-gap*(n+1))/n;
+  for(let i=0;i<n;i++)h+=`<rect class="slat" x="${gap*.6}" y="${gap+i*(sh+gap)}" width="${B.w-gap*1.2}" height="${sh}" rx=".4"/>`;
+  for(let x=5;x<B.w;x+=5)h+=`<line class="gridl" x1="${x}" y1="0" x2="${x}" y2="${B.h}"/>`;
+  for(let y=5;y<B.h;y+=5)h+=`<line class="gridl" x1="0" y1="${y}" x2="${B.w}" y2="${y}"/>`;
+  for(let x=0;x<=B.w+.01;x+=10)h+=`<text class="ruler" x="${x}" y="-1" text-anchor="middle">${x}</text>`;
+  h+=`<text class="ruler" x="${B.w/2}" y="${B.h+2.2}" text-anchor="middle" style="fill:#4f5661">frente (lado do músico) · ${fmt(B.w)} × ${fmt(B.h)} cm</text>`;
+  for(let y=0;y<=B.h+.01;y+=10)h+=`<text class="ruler" x="-1.2" y="${y+.35}" text-anchor="end">${y}</text>`;
+
+  const L=links(),bad=problems().badIds;
+  // pedais
+  S.pedals.forEach(p=>{
+    const f=fp(p),j=jacks(p),idx=S.chain.indexOf(p.id);
+    const light=lum(p.color)>.6,tc=light?'#111':'#f2f2f2';
+    const fs=Math.max(.55,Math.min(1.15,(f.W-.8)/(Math.max(6,p.name.length)*.56)));
+    const fsw=rotPt(p,p.w/2,p.h*.8);
+    h+=`<g class="pedal${S.sel===p.id?' sel':''}${bad.has(p.id)?' bad':''}" data-id="${p.id}">`;
+    h+=`<rect x="${p.x+.15}" y="${p.y+.25}" width="${f.W}" height="${f.H}" rx=".6" fill="#0007"/>`;
+    h+=`<rect class="body" x="${p.x}" y="${p.y}" width="${f.W}" height="${f.H}" rx=".6" fill="${p.color}"/>`;
+    h+=`<circle cx="${p.x+fsw[0]}" cy="${p.y+fsw[1]}" r="${Math.min(.95,f.W/6)}" fill="${light?'#9aa':'#c9ccd1'}" stroke="#0008" stroke-width=".12"/>`;
+    h+=`<text x="${p.x+f.W/2}" y="${p.y+f.H*.42}" font-size="${fs}" fill="${tc}" text-anchor="middle">${esc(p.name)}</text>`;
+    h+=`<text x="${p.x+f.W/2}" y="${p.y+f.H*.42+fs*1.25}" font-size="${fs*.72}" fill="${tc}" opacity=".6" text-anchor="middle" style="font-weight:500">${fmt(f.W)}×${fmt(f.H)}</text>`;
+    if(idx>=0){h+=`<circle cx="${p.x+1.1}" cy="${p.y+1.1}" r=".85" fill="#f5a623"/><text x="${p.x+1.1}" y="${p.y+1.45}" font-size="1" fill="#1a1200" text-anchor="middle">${idx+1}</text>`;
+      h+=`<circle class="jin" cx="${j.in.x}" cy="${j.in.y}" r=".5"/><circle class="jout" cx="${j.out.x}" cy="${j.out.y}" r=".5"/>`;}
+    h+=`</g>`;
+  });
+  // terminais
+  if(S.panel)['in','out'].forEach(k=>{const t=S.term[k];
+    h+=`<g class="term" data-term="${k}"><rect x="${t.x-1.4}" y="${t.y-1.4}" width="2.8" height="2.8" rx=".5" fill="${k==='in'?'#1f6f4a':'#8a5a10'}" stroke="#000" stroke-width=".12"/><text x="${t.x}" y="${t.y+.33}" font-size=".9" fill="#fff" text-anchor="middle" style="font-weight:700;pointer-events:none">${k==='in'?'IN':'OUT'}</text></g>`});
+  // cabos
+  if(S.showCables)L.forEach(c=>{
+    const dist=Math.hypot(c.eb.x-c.ea.x,c.eb.y-c.ea.y),k=Math.max(2,Math.min(10,dist*.4));
+    const p1={x:c.ea.x+c.a.d[0]*k,y:c.ea.y+c.a.d[1]*k},p2={x:c.eb.x+c.b.d[0]*k,y:c.eb.y+c.b.d[1]*k};
+    const col=c.crossed||c.hits.length?'#ff5d5d':c.color;
+    h+=`<g style="pointer-events:none">`;
+    h+=`<path d="M${c.ea.x} ${c.ea.y}C${p1.x} ${p1.y} ${p2.x} ${p2.y} ${c.eb.x} ${c.eb.y}" fill="none" stroke="#000a" stroke-width=".75" stroke-linecap="round"/>`;
+    h+=`<path d="M${c.ea.x} ${c.ea.y}C${p1.x} ${p1.y} ${p2.x} ${p2.y} ${c.eb.x} ${c.eb.y}" fill="none" stroke="${col}" stroke-width=".45" stroke-linecap="round"/>`;
+    [[c.a,c.ea],[c.b,c.eb]].forEach(([j,e])=>h+=`<line x1="${j.x}" y1="${j.y}" x2="${e.x}" y2="${e.y}" stroke="#15181c" stroke-width="1.1" stroke-linecap="round"/><line x1="${j.x}" y1="${j.y}" x2="${e.x}" y2="${e.y}" stroke="#6b7480" stroke-width=".35" stroke-linecap="round"/>`);
+    if(S.showLabels){const mx=.125*c.ea.x+.375*p1.x+.375*p2.x+.125*c.eb.x,my=.125*c.ea.y+.375*p1.y+.375*p2.y+.125*c.eb.y;
+      const lab=c.size.v+' cm',w=lab.length*.62+.8;
+      h+=`<rect x="${mx-w/2}" y="${my-.75}" width="${w}" height="1.5" rx=".75" fill="#0d0f12" stroke="${col}" stroke-width=".12"/><text class="clabel" x="${mx}" y="${my+.33}" fill="${col}" text-anchor="middle">${lab}</text>`;}
+    h+=`</g>`;
+  });
+  root.innerHTML=h;
+  renderStatus(L);
+}
+function lum(hex){const n=parseInt((hex||'#000').slice(1),16);return((n>>16&255)*.299+(n>>8&255)*.587+(n&255)*.114)/255}
+
+function problems(){
+  const B=S.board,badIds=new Set(),msgs=[];
+  const R=S.pedals.map(p=>[p,rectOf(p)]);
+  for(let i=0;i<R.length;i++)for(let j=i+1;j<R.length;j++)if(inter(R[i][1],R[j][1])){
+    badIds.add(R[i][0].id);badIds.add(R[j][0].id);msgs.push(['bad',`${R[i][0].name} e ${R[j][0].name} estão sobrepostos.`])}
+  R.forEach(([p,r])=>{if(r.x<-.01||r.y<-.01||r.x+r.W>B.w+.01||r.y+r.H>B.h+.01){badIds.add(p.id);msgs.push(['',`${p.name} está para fora da base.`])}});
+  return{badIds,msgs};
+}
+function renderStatus(L){
+  const B=S.board,P=problems();
+  const area=S.pedals.reduce((s,p)=>{const r=rectOf(p);const w=Math.max(0,Math.min(B.w,r.x+r.W)-Math.max(0,r.x)),hh=Math.max(0,Math.min(B.h,r.y+r.H)-Math.max(0,r.y));return s+w*hh},0);
+  const tot=L.reduce((s,c)=>s+c.size.v,0);
+  $('#status').innerHTML=`<span class="chip">Ocupação <b>${Math.round(area/(B.w*B.h)*100)}%</b></span><span class="chip">Na cadeia <b>${S.chain.length}</b> de ${S.pedals.length}</span><span class="chip">Cabos <b>${L.length}</b></span><span class="chip">Total <b>${fmt(tot/100,2)} m</b></span><span class="chip">Livre <b>${fmt((B.w*B.h-area)/100,0)} dm²</b></span>`;
+  const w=[...P.msgs];
+  L.forEach(c=>{if(c.crossed)w.push(['bad',`Pouco espaço entre ${c.from} e ${c.to}: os conectores ${PLUGS[S.plug].n.toLowerCase()} vão se encostar. Afaste os pedais ou use conector panqueca.`]);
+    if(c.hits.length)w.push(['',`O conector do cabo ${c.from} → ${c.to} bate em ${c.hits.join(', ')}.`])});
+  $('#warns').innerHTML=w.map(([k,m])=>`<div class="warn ${k}">${esc(m)}</div>`).join('');
+}
+
+/* ---------- interação no canvas ---------- */
+let drag=null,lastTap={id:null,t:0};
+function svgPt(e){const m=svg.getScreenCTM().inverse();const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(m);return{x:p.x,y:p.y}}
+const snap=v=>{const s=+S.snap||.5;return +(Math.round(v/s)*s).toFixed(2)};
+svg.addEventListener('pointerdown',e=>{
+  const t=e.target.closest('[data-id],[data-term]');
+  if(!t){if(S.sel){S.sel=null;render();renderPane()}return}
+  e.preventDefault();const p=svgPt(e);
+  if(t.dataset.id){const ped=byId(t.dataset.id);
+    const now=Date.now();
+    if(lastTap.id===ped.id&&now-lastTap.t<320){rotate(ped);lastTap={id:null,t:0};save();render();renderPane();return}
+    lastTap={id:ped.id,t:now};
+    const changed=S.sel!==ped.id;S.sel=ped.id;drag={o:ped,dx:p.x-ped.x,dy:p.y-ped.y};
+    // traz para frente
+    S.pedals=S.pedals.filter(x=>x!==ped).concat(ped);
+    render();if(changed||S.tab==='pedais')renderPane();
+  }else{const tm=S.term[t.dataset.term];drag={o:tm,dx:p.x-tm.x,dy:p.y-tm.y,term:true}}
+  try{svg.setPointerCapture(e.pointerId)}catch(_){}
+});
+svg.addEventListener('pointermove',e=>{
+  if(!drag)return;const p=svgPt(e),B=S.board;
+  let x=snap(p.x-drag.dx),y=snap(p.y-drag.dy);
+  x=Math.max(-M+1,Math.min(B.w+M-1,x));y=Math.max(-M+1,Math.min(B.h+M-1,y));
+  if(drag.term){x=Math.max(0,Math.min(B.w,x));y=Math.max(0,Math.min(B.h,y))}
+  if(x!==drag.o.x||y!==drag.o.y){drag.o.x=x;drag.o.y=y;render();if(S.tab==='cabos')renderCab()}
+});
+const endDrag=()=>{if(drag){drag=null;save();if(S.tab==='cabos')renderCab()}};
+svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
+
+function rotate(p,dir=90){const f=fp(p),cx=p.x+f.W/2,cy=p.y+f.H/2;p.rot=(p.rot+dir+360)%360;const g=fp(p);p.x=snap(cx-g.W/2);p.y=snap(cy-g.H/2)}
+function dup(p){const c={...p,id:uid(),x:snap(p.x+2),y:snap(p.y+2),name:p.name+' (cópia)'};S.pedals.push(c);if(inChain(p))S.chain.splice(S.chain.indexOf(p.id)+1,0,c.id);S.sel=c.id}
+function del(p){S.pedals=S.pedals.filter(x=>x!==p);S.chain=S.chain.filter(id=>id!==p.id);if(S.sel===p.id)S.sel=null}
+function act(a){const p=byId(S.sel);if(!p)return toast('Selecione um pedal primeiro');
+  if(a==='rot')rotate(p);if(a==='dup')dup(p);if(a==='del')del(p);save();render();renderPane()}
+document.querySelectorAll('.toolbar [data-act]').forEach(b=>b.onclick=()=>act(b.dataset.act));
+document.addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  const p=byId(S.sel);if(!p)return;
+  const s=+S.snap||.5,mv={ArrowLeft:[-s,0],ArrowRight:[s,0],ArrowUp:[0,-s],ArrowDown:[0,s]}[e.key];
+  if(mv){p.x=snap(p.x+mv[0]);p.y=snap(p.y+mv[1]);e.preventDefault()}
+  else if(e.key==='r'||e.key==='R')rotate(p,e.shiftKey?-90:90);
+  else if(e.key==='Delete'||e.key==='Backspace'){del(p);e.preventDefault()}
+  else return;
+  save();render();renderPane();
+});
+
+/* ---------- toolbar base ---------- */
+const bp=$('#boardPreset');
+bp.innerHTML=BOARDS.map(b=>`<option value="${b[0]}">${b[1]}${b[2]?` (${fmt(b[2])}×${fmt(b[3])})`:''}</option>`).join('');
+function syncBoard(){bp.value=S.board.preset||'custom';$('#bw').value=S.board.w;$('#bh').value=S.board.h;$('#showCables').checked=S.showCables;$('#showLabels').checked=S.showLabels}
+bp.onchange=()=>{const b=BOARDS.find(x=>x[0]===bp.value);S.board.preset=b[0];if(b[2]){S.board.w=b[2];S.board.h=b[3]}clampTerms();syncBoard();save();render();renderPane()};
+['bw','bh'].forEach(id=>$('#'+id).oninput=e=>{const v=parseFloat(e.target.value);if(!(v>=5))return;S.board[id==='bw'?'w':'h']=v;S.board.preset='custom';bp.value='custom';clampTerms();save();render();if(S.tab==='cabos')renderCab()});
+$('#showCables').onchange=e=>{S.showCables=e.target.checked;save();render()};
+$('#showLabels').onchange=e=>{S.showLabels=e.target.checked;save();render()};
+function clampTerms(){const B=S.board;['in','out'].forEach(k=>{const t=S.term[k];t.x=Math.max(0,Math.min(B.w,t.x));t.y=Math.max(0,Math.min(B.h,t.y))});S.term.in.x=Math.min(S.term.in.x,B.w)}
+
+/* ---------- painel lateral ---------- */
+const pane=$('#pane');
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;save();renderPane()});
+function renderPane(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
+  if(S.tab==='cabos')return renderCabos();
+  if(S.tab==='projeto')return renderProjeto();
+  renderPedais();
+}
+function renderPedais(){
+  const ch=S.chain.map(byId).filter(Boolean),off=S.pedals.filter(p=>!inChain(p));
+  const li=(p,i)=>`<li data-id="${p.id}" class="${S.sel===p.id?'sel':''}"><span class="num ${i<0?'off':''}">${i<0?'–':i+1}</span><span class="sw" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span>${i>=0?`<button data-a="up" ${i===0?'disabled':''}>▲</button><button data-a="down" ${i===ch.length-1?'disabled':''}>▼</button><button data-a="out" title="Tirar da cadeia">✕</button>`:`<button data-a="in">+ cadeia</button>`}</li>`;
+  const p=byId(S.sel);
+  pane.innerHTML=`
+  <div class="sec"><h3>Adicionar pedal</h3>
+    <input id="q" placeholder="Buscar marca ou modelo (ex.: Darkglass, octave, wah)" autocomplete="off" value="${esc(libQ)}" style="width:100%"><div id="catList" class="cat"></div><p class="hint" id="catCount" style="margin-top:6px"></p>
+    <details><summary>Pedal com medidas próprias</summary>
+      <div class="row"><label class="field"><span>Nome</span><input id="cn" value="Meu pedal"></label></div>
+      <div class="row" style="margin-top:6px"><label class="field"><span>Largura (cm)</span><input id="cw" type="number" step="0.1" value="7"></label><label class="field"><span>Profundidade (cm)</span><input id="ch" type="number" step="0.1" value="12"></label><button data-a="addc" style="align-self:flex-end">Adicionar</button></div>
+    </details>
+  </div>
+  <div class="sec"><h3>Ordem do sinal</h3>
+    <div class="io">🎸 Instrumento${S.panel?' → Painel IN':''}</div>
+    <ol class="list" id="chainList">${ch.map((p,i)=>li(p,i)).join('')||'<p class="hint">Nenhum pedal na cadeia.</p>'}</ol>
+    <div class="io">→ ${S.panel?'Painel OUT → ':''}Amp / mesa 🔊</div>
+    ${off.length?`<h3 style="margin-top:12px">Fora da cadeia</h3><ul class="list">${off.map(p=>li(p,-1)).join('')}</ul>`:''}
+  </div>
+  ${p?`<div class="sec"><h3>Pedal selecionado</h3>
+    <div class="row"><label class="field"><span>Nome</span><input data-f="name" value="${esc(p.name)}"></label><label class="field" style="flex:0 0 52px"><span>Cor</span><input data-f="color" type="color" value="${p.color}" style="padding:2px;height:33px"></label></div>
+    <div class="row" style="margin-top:8px"><label class="field"><span>Largura (cm)</span><input data-f="w" type="number" step="0.1" min="1" value="${p.w}"></label><label class="field"><span>Profundidade (cm)</span><input data-f="h" type="number" step="0.1" min="1" value="${p.h}"></label></div>
+    <div class="row" style="margin-top:8px"><label class="field"><span>Posição dos jacks</span><select data-f="jacks">
+      <option value="lados" ${p.jacks==='lados'?'selected':''}>Laterais — entrada à direita, saída à esquerda</option>
+      <option value="inv" ${p.jacks==='inv'?'selected':''}>Laterais invertidos — entrada à esquerda</option>
+      <option value="topo" ${p.jacks==='topo'?'selected':''}>No topo (top-mounted)</option></select></label></div>
+    <div class="row" style="margin-top:8px"><button data-a="rot">⟳ Girar 90°</button><button data-a="dup">Duplicar</button><button data-a="del" class="danger">Remover</button></div>
+    <p class="hint" style="margin-top:8px">Posição: x ${fmt(p.x)} · y ${fmt(p.y)} cm · rotação ${p.rot}°</p>
+  </div>`:'<p class="hint">Toque num pedal (no desenho ou na lista) para editar nome, medidas, cor e posição dos jacks.</p>'}
+  <p class="hint">As medidas do catálogo são aproximadas — confira com uma régua e ajuste no pedal selecionado.</p>`;
+  renderCat();
+}
+let libQ='';
+const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function renderCat(){
+  const el=$('#catList');if(!el)return;const q=norm(libQ).split(/\s+/).filter(Boolean);
+  const cnt=$('#catCount');if(cnt)cnt.textContent=catLoaded?`${(CATALOG.length-BASE_N).toLocaleString('pt-BR')} pedais do catálogo Rivus · toque para adicionar`:'Carregando catálogo…';
+  let items;
+  if(!q.length)items=CATALOG.slice(0,BASE_N).map((c,i)=>[c,i]);
+  else{items=[];for(let i=0;i<CATALOG.length&&items.length<200;i++){const c=CATALOG[i];const s=c._s||(c._s=norm(c[0]+' '+c[1]));if(q.every(t=>s.includes(t)))items.push([c,i])}}
+  let html='',g=null;
+  items.forEach(([c,i])=>{if(c[0]!==g){g=c[0];html+=`<div class="cg">${esc(g)}</div>`}html+=`<button class="ci" data-a="addc2" data-i="${i}"><span class="sw" style="background:${c[4]||brandColor(c[0])}"></span><span class="nm">${esc(c[1])}</span><span class="mono dim">${fmt(c[2])}×${fmt(c[3])}</span></button>`});
+  if(!q.length&&catLoaded)html+='<p class="hint" style="padding:8px 10px">Digite uma marca ou modelo para buscar no catálogo completo.</p>';
+  if(q.length&&items.length>=200)html+='<p class="hint" style="padding:8px 10px">Mostrando os 200 primeiros — refine a busca.</p>';
+  el.innerHTML=html||'<p class="hint" style="padding:8px">Nada encontrado. Use “Pedal com medidas próprias”.</p>';
+}
+function brandColor(b){let x=0;for(const ch of b)x=(x*31+ch.charCodeAt(0))>>>0;const P=['#2b2f36','#b03a2e','#2e86c1','#1e6b4f','#7d3c98','#d4ac0d','#16a085','#5d6d7e','#a04000','#1c2833','#cfd4da','#884ea0'];return P[x%P.length]}
+pane.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]'),liEl=e.target.closest('li[data-id]');
+  if(!b&&liEl){S.sel=liEl.dataset.id;render();renderPane();return}
+  if(!b)return;const a=b.dataset.a;
+  const id=liEl?.dataset.id;
+  if(a==='up'||a==='down'){const i=S.chain.indexOf(id),j=a==='up'?i-1:i+1;if(j<0||j>=S.chain.length)return;[S.chain[i],S.chain[j]]=[S.chain[j],S.chain[i]]}
+  else if(a==='out')S.chain=S.chain.filter(x=>x!==id);
+  else if(a==='in')S.chain.push(id);
+  else if(a==='addc2'){const c=CATALOG[+b.dataset.i];const nm=c[0]==='Seu setup'||c[0]==='Formatos genéricos'?c[1]:c[0]+' '+c[1];addPedal(nm,c[2],c[3],c[4]||brandColor(c[0]),'lados',c[5])}
+  else if(a==='addc'){const w=parseFloat($('#cw').value),h=parseFloat($('#ch').value);if(!(w>0&&h>0))return toast('Informe largura e profundidade');addPedal($('#cn').value||'Pedal',w,h,CC[S.pedals.length%CC.length],'lados',true)}
+  else if(['rot','dup','del'].includes(a))return act(a);
+  else return handleOther(a,b);
+  save();render();renderPane();
+});
+pane.addEventListener('input',e=>{
+  if(e.target.id==='q'){libQ=e.target.value;renderCat();return}
+  const f=e.target.dataset.f,s=e.target.dataset.s;const p=byId(S.sel);
+  if(f&&p){let v=e.target.value;if(f==='w'||f==='h'){v=parseFloat(v);if(!(v>0))return}p[f]=v;save();render();
+    if(f==='jacks')renderPane();
+    if(f==='name'||f==='color'){const l=pane.querySelector(`li[data-id="${p.id}"]`);if(l){l.querySelector('.nm').textContent=p.name;l.querySelector('.sw').style.background=p.color}}}
+  if(s){let v=e.target.type==='checkbox'?e.target.checked:e.target.value;if(s==='slack')v=parseFloat(v)||0;S[s]=v;save();render();if(s==='panel'||s==='round')renderCabos();else renderCab()}
+});
+function addPedal(name,w,h,color,jk,chain){
+  const B=S.board;let x=snap(B.w/2-w/2),y=snap(B.h/2-h/2);
+  // procura um espaço livre
+  outer:for(let yy=1;yy<=B.h-h;yy+=1)for(let xx=B.w-w-1;xx>=0;xx-=1){const r={x:xx,y:yy,W:w,H:h};if(!S.pedals.some(p=>inter(r,{...rectOf(p),x:rectOf(p).x-1.5,W:rectOf(p).W+3}))){x=xx;y=yy;break outer}}
+  const p={id:uid(),name,w,h,x,y,rot:0,color,jacks:jk};S.pedals.push(p);if(chain)S.chain.push(p.id);S.sel=p.id;
+  toast(`${name} adicionado`);
+}
+
+/* cabos */
+function renderCabos(){
+  const seg=(key,opts)=>`<div class="seg">${opts.map(([v,l])=>`<button data-a="seg" data-k="${key}" data-v="${v}" class="${String(S[key])===String(v)?'on':''}">${l}</button>`).join('')}</div>`;
+  pane.innerHTML=`
+  <div class="sec"><h3>Conector</h3>${seg('plug',Object.entries(PLUGS).map(([k,v])=>[k,v.n]))}
+    <p class="hint" style="margin-top:6px">O conector ocupa cerca de ${fmt(PLUGS[S.plug].off)} cm para fora do jack — isso entra no cálculo do espaço entre pedais.</p></div>
+  <div class="sec"><h3>Trajeto do cabo</h3>${seg('route',[['orto','Organizado (90°)'],['reto','Linha reta']])}
+    <p class="hint" style="margin-top:6px">“Organizado” soma os trechos horizontal e vertical, como um cabo bem acomodado. “Linha reta” dá o mínimo absoluto.</p></div>
+  <div class="sec"><h3>Ajustes</h3>
+    <div class="row"><label class="field"><span>Folga extra por cabo (cm)</span><input data-s="slack" type="number" step="0.5" min="0" value="${S.slack}"></label>
+      <label class="field"><span>Arredondar para</span><select data-s="round"><option value="comercial" ${S.round==='comercial'?'selected':''}>Tamanhos de loja</option><option value="5" ${S.round==='5'?'selected':''}>Sob medida (5 em 5 cm)</option><option value="1" ${S.round==='1'?'selected':''}>Sob medida (1 em 1 cm)</option></select></label></div>
+    ${S.round==='comercial'?`<label class="field" style="margin-top:8px"><span>Tamanhos disponíveis (cm)</span><input data-s="sizes" value="${esc(S.sizes)}"></label>`:''}
+    <label class="row" style="margin-top:10px;font-size:13px"><input type="checkbox" data-s="panel" ${S.panel?'checked':''}> Incluir painel de jacks IN/OUT na base</label>
+    ${S.panel?'<p class="hint">Arraste os quadrados IN e OUT no desenho até onde ficam os jacks do painel.</p>':''}
+  </div>
+  <div id="cabres"></div>`;
+  renderCab();
+}
+function renderCab(){
+  const el=$('#cabres');if(!el)return;
+  const L=links();
+  if(!L.length){el.innerHTML='<p class="hint">Coloque pelo menos dois pedais na cadeia para calcular os cabos.</p>';return}
+  const tot=L.reduce((s,c)=>s+c.size.v,0),cnt={};
+  L.forEach(c=>{const k=c.size.v+' cm'+(c.size.custom?' (sob medida)':'');cnt[k]=(cnt[k]||0)+1});
+  el.innerHTML=`<div class="sec"><h3>Cabos necessários</h3>
+    <div class="row" style="justify-content:space-between;margin-bottom:8px"><div><div class="big">${L.length} cabos</div><div class="hint">${fmt(tot/100,2)} m no total</div></div><button class="pri" data-a="copy">Copiar lista</button></div>
+    <table><thead><tr><th>#</th><th>Ligação</th><th>Medido</th><th>Cabo</th></tr></thead><tbody>
+    ${L.map(c=>`<tr><td class="mono">${c.i+1}</td><td><span class="dot" style="background:${c.crossed||c.hits.length?'#ff5d5d':c.color}"></span>${esc(c.from)} → ${esc(c.to)}</td><td class="mono">${fmt(c.d)}</td><td class="mono"><b>${c.size.v}</b>${c.size.custom&&S.round==='comercial'?'*':''}</td></tr>`).join('')}
+    </tbody></table>
+    ${L.some(c=>c.size.custom&&S.round==='comercial')?'<p class="hint">* maior que os tamanhos de loja informados — precisa ser sob medida.</p>':''}
+  </div>
+  <div class="sec"><h3>Lista de compras</h3><div class="sum">${Object.entries(cnt).sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).map(([k,v])=>`<span class="chip"><b>${v}×</b> ${k}</span>`).join('')}</div>
+  <p class="hint" style="margin-top:8px">Medida de ponta a ponta entre os corpos dos conectores, já com ${fmt(S.slack)} cm de folga. Conector: ${PLUGS[S.plug].n}.</p></div>`;
+}
+function cabText(){
+  const L=links(),cnt={};L.forEach(c=>{const k=c.size.v+' cm';cnt[k]=(cnt[k]||0)+1});
+  return `Pedalboard ${fmt(S.board.w)} × ${fmt(S.board.h)} cm — cabos de patch (conector ${PLUGS[S.plug].n}, folga ${fmt(S.slack)} cm)\n`+
+    L.map(c=>`${c.i+1}. ${c.from} → ${c.to}: ${c.size.v} cm (medido ${fmt(c.d)} cm)`).join('\n')+
+    `\n\nComprar: ${Object.entries(cnt).sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).map(([k,v])=>`${v}× ${k}`).join(', ')}\nTotal: ${fmt(L.reduce((s,c)=>s+c.size.v,0)/100,2)} m`;
+}
+
+/* projeto */
+function renderProjeto(){
+  pane.innerHTML=`
+  <div class="sec"><h3>Salvar e compartilhar</h3>
+    <p class="hint">O projeto fica salvo automaticamente neste navegador. Para levar para outro aparelho, copie o código e cole lá em “Importar”.</p>
+    <div class="row" style="margin-top:8px"><button class="pri" data-a="export">Copiar código do projeto</button><button data-a="copy">Copiar lista de cabos</button></div>
+    <textarea id="expTxt" readonly style="margin-top:8px;display:none"></textarea>
+  </div>
+  <div class="sec"><h3>Importar</h3>
+    <textarea id="impTxt" placeholder="Cole aqui o código de um projeto"></textarea>
+    <div class="row" style="margin-top:8px"><button data-a="import">Importar projeto</button></div>
+  </div>
+  <div class="sec"><h3>Recomeçar</h3>
+    <div class="row"><button data-a="reset">Voltar ao meu setup de exemplo</button><button data-a="clear" class="danger">Base vazia</button></div>
+  </div>
+  <div class="sec"><h3>Ajuste fino</h3>
+    <label class="field"><span>Passo do encaixe (cm)</span><select data-s="snap"><option value="0.1" ${S.snap==0.1?'selected':''}>0,1</option><option value="0.5" ${S.snap==0.5?'selected':''}>0,5</option><option value="1" ${S.snap==1?'selected':''}>1</option></select></label>
+  </div>`;
+}
+let confirmT=0;
+function handleOther(a,b){
+  if(a==='seg'){S[b.dataset.k]=b.dataset.v;save();render();renderCabos();return}
+  if(a==='copy')return copy(cabText(),'Lista de cabos copiada');
+  if(a==='export'){const {sel,tab,...rest}=S;const t=JSON.stringify(rest);const ta=$('#expTxt');ta.value=t;ta.style.display='block';return copy(t,'Código do projeto copiado')}
+  if(a==='import'){try{const o=JSON.parse($('#impTxt').value);if(!Array.isArray(o.pedals))throw 0;S=Object.assign(defaults(),o,{sel:null,tab:'pedais'});save();syncBoard();render();renderPane();toast('Projeto importado')}catch(e){toast('Código inválido')}return}
+  if(a==='reset'||a==='clear'){
+    if(Date.now()-confirmT>2500){confirmT=Date.now();b.textContent='Toque de novo para confirmar';return}
+    const tab=S.tab;S=defaults();S.tab=tab;if(a==='clear'){S.pedals=[];S.chain=[]}save();syncBoard();render();renderPane();toast('Pronto');return}
+}
+function copy(t,msg){
+  const done=()=>toast(msg);
+  try{navigator.clipboard.writeText(t).then(done,()=>fallback(t))}catch(e){fallback(t)}
+}
+function fallback(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}ta.remove();toast(ok?'Copiado':'Não foi possível copiar — selecione o texto manualmente')}
+let tt;function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1800)}
+
+syncBoard();render();renderPane();
+})();
+</script>
+</body>
+</html>
